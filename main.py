@@ -30,6 +30,24 @@ class MazeData(object):
         pass
         # ??? don't know if i'll need this
 
+class CanvasData(object):
+    resizeRedrawDelay = 10  # prevent resize redraw lagging
+    resizeTracker = 0
+
+    def redrawCanvas(canvas, mazeData):
+        # to be called whenever the screen is resized.
+        # mazeData is a MazeData object that should be passed in
+        # canvas.update_idletasks()
+        CanvasData.resizeTracker += 1
+        if CanvasData.resizeTracker == CanvasData.resizeRedrawDelay:
+            w = canvas.winfo_width() + CanvasData.resizeRedrawDelay
+            h = canvas.winfo_height() + CanvasData.resizeRedrawDelay
+            # canvas['width'] = w - 4
+            # canvas['height'] = h - 4
+            canvas.create_rectangle(0, 0, w, h, fill='white')
+            mazeData.drawMaze(canvas)
+            CanvasData.resizeTracker = 0
+
 def setSolveMode():
     pass
     # updates state to solve mode
@@ -39,13 +57,6 @@ def setGenerateMode():
     pass
     # updates state to generate mode
     # also deals with mode button appearance
-
-def redrawCanvas(canvas, mazeData, width, height):
-    # to be called whenever the screen is resized.
-    # mazeData is a MazeData object that should be passed in
-    canvas.create_rectangle(0, 0, width+2, height+2, fill='white',
-                            outline='black', width=10)
-    mazeData.drawMaze(canvas)
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
@@ -85,11 +96,19 @@ modeButtonsFrame.columnconfigure(1, weight=1)
 
 
 # Put this next block into function to initialize everything
+
+
 setSolveMode()
 # create the MazeData instance that will store all the data
 # draw it all onto the canvas
-mData = MazeData((6,6), set(), 0, 35)
-redrawCanvas(canvas, mData, int(canvas['width']), int(canvas['height']))
+mData = MazeData((6,6), set(), 0, 35)  # magic numbers - have defaultDims, etc.
+
+
+# initially draw the canvas and maze
+canvas.create_rectangle(0, 0, 304, 304, fill='white')
+mData.drawMaze(canvas)
+# add event binding to handle canvas resizing
+root.bind('<Configure>', lambda e: CanvasData.redrawCanvas(canvas, mData))
 
 root.mainloop()
 print('done')
