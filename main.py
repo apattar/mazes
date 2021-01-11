@@ -1,122 +1,31 @@
 from tkinter import *
 from tkinter import ttk
+from objects import *
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
 
+def configAnimButtonPushed():
+    pass
+    # creates new toplevel window; will need root and
+    # data objects to be passed into this function
+    # as arguments, so the new toplevel window can
+    # have the root as a parent
 
-class ApplicationStateData(object):
-    solveAlgorithms = ['dfs', 'bfs', 'astar']   # dijkstra?
-    genAlgorithms = ['ec', 'vc']    # possibly more?
-
-    def __init__(self):
-        self.mode = StringVar()
-        self.setSolveMode()
-        self.animationRunning = False  # bool
-        self.currentAlgorithm = StringVar(value='dfs')
-        # don't need to store some of these things twice - can just access them directly from the widget
-    
-    def setSolveMode(self):
-        self.mode.set('Solve')
-        # extend!!!
-        # updates state to solve mode
-        # also deals with mode button appearance
-        # set algorithm
-    
-    def setGenerateMode(self):
-        self.mode.set('Generate')
-        # updates state to generate mode
-        # also deals with mode button appearance
-    
-    def animate(self):
-        pass
-        # to be called when solve/generate button is clicked
-        # use animationSpeedSlider.get() (widget) and algorithm.get() (a StringVar)
-        # disable stuff that needs to be disabled; maybe set an 'animating' mode?
-        # handles calling the step function when animation not in step mode - if in step mode, just do one step
-    
-    def stepAnimation(self):
-        pass
-        # advances animation, and redraws stuff
-    
-    def configAnimButtonPushed(self):
-        pass
-
-    def configAlgButtonPushed(self):
-        pass
-
-class MazeData(object):
-    def __init__(self, dims, boundaries, startCell, endCell):
-        # dims must be a 2-tuple with form (rows, cols)
-        # there will be rows*cols cells in the maze, indexed 0 to rows*cols
-        # boundaries is a set of integers; the absolute value of the integer
-        # represents a cell, positive values represent a boundary to the right,
-        # and negative values represent a boundary below
-        self.dims = dims
-        self.numCells = dims[0] * dims[1]
-        self.startCell = startCell
-        self.endCell = endCell
-        self.boundaries = boundaries
-    
-    def drawMaze(self, canvas):
-        pass
-        # draws maze onto the canvas.
-        # Things to remember:
-        # checkered cells, with light grey
-        # start and end squares light blue and green, respectively
-
-    def updateRows(self):
-        pass
-        # updates the dims for the main maze and calls the redraw function.
-        # to be called when dimensions are changed by the user
-        # maybe combine this and updateCols into one updateDims?
-    
-    def updateCols(self):
-        pass
-    
-    def updateStartEndCells(self):
-        pass
-        # ??? don't know if i'll need this
-        # want changing location of start and end cells feature to be disabled
-        # when:
-        # an animation is running
-        # when we're in generate mode, and there's a human-drawn solution still
-        # there
-        
-    def clearMaze(self):
-        pass
-        # to be called when Clear Maze button is pressed
-        # updates MazeData object, clearing boundaries/solve line,
-        # depending on what mode it's in
-
-class CanvasData(object):
-    def __init__(self, resizeRedrawDelay):
-        self.resizeRedrawDelay = resizeRedrawDelay  # prevent resize redraw lagging
-        self.resizeTracker = 0
-
-    def redrawCanvas(self, canvas, mazeData):
-        # to be called whenever the screen is resized.
-        # mazeData is a MazeData object that should be passed in
-        # canvas.update_idletasks()
-        self.resizeTracker += 1
-        if self.resizeTracker == self.resizeRedrawDelay:
-            w = canvas.winfo_width() + self.resizeRedrawDelay
-            h = canvas.winfo_height() + self.resizeRedrawDelay
-            # canvas['width'] = w - 4
-            # canvas['height'] = h - 4
-            canvas.create_rectangle(0, 0, w, h, fill='white')
-            mazeData.drawMaze(canvas)
-            self.resizeTracker = 0
-
-
+def configAlgButtonPushed():
+    pass
 
 if __name__ == '__main__':
     print('starting...')
     root = Tk()
     root.title('Mazes')
 
+    defaultDims = (7,10)
+    defaultSpeed = 15   # from 1 to 30
+
     # create the object instances that will store all the data
-    mData = MazeData((6,6), set(), 0, 35)  # magic numbers - have defaultDims, etc.
+    mData = MazeData(defaultDims, 
+                      set([-6, -7]), 0, defaultDims[0]*defaultDims[1] - 1)
     stateData = ApplicationStateData()
     cData = CanvasData(10)
 
@@ -138,10 +47,10 @@ if __name__ == '__main__':
                             command=mData.clearMaze)
     rowsLabel = ttk.Label(genControlsFrame, text='Rows: ')
     rowsSpinbox = ttk.Spinbox(genControlsFrame, from_=1.0, to=30.0,
-                            command=lambda: mData.updateRows())    # TODO disable when there's user-inputted stuff on the maze, or an animation running
+                            command=lambda: mData.updateRows(rowsSpinbox, canvas))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
     colsLabel = ttk.Label(genControlsFrame, text='Columns: ')
     colsSpinbox = ttk.Spinbox(genControlsFrame, from_=1.0, to=30.0,
-                            command=lambda: mData.updateCols())    # TODO disable when there's user-inputted stuff on the maze, or an animation running
+                            command=lambda: mData.updateCols(colsSpinbox, canvas))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
     # use rowsSpinbox.get() to get the value in the spinbox
 
     algDisplayFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
@@ -150,7 +59,7 @@ if __name__ == '__main__':
                             anchor='center', relief='ridge', borderwidth=10)  # TODO more decoration?
     configAlgButton = ttk.Button(algDisplayFrame,
                                  text='Configure\nAlgorithm Options',
-                                 command=stateData.configAlgButtonPushed)
+                                 command=configAlgButtonPushed)
     animationSpeedLabel = ttk.Label(algDisplayFrame, text='Animation Speed:')
     animationSpeedSlider = ttk.Scale(algDisplayFrame, orient=HORIZONTAL, length=30,
                                     from_=1.0, to=30.0)
@@ -160,12 +69,12 @@ if __name__ == '__main__':
                                      command=stateData.stepAnimation)   # grid only when in step mode
     configAnimButton = ttk.Button(algDisplayFrame,
                                   text='Configure\nAnimation Options',
-                                  command=stateData.configAnimButtonPushed)
+                                  command=configAnimButtonPushed)
 
 
     solgenButton = ttk.Button(mainframe, textvariable=stateData.mode, command=stateData.animate)
 
-    canvas = Canvas(mainframe, width=500, height=370)
+    canvas = Canvas(mainframe, width=500, height=350)
 
 
 
@@ -241,16 +150,18 @@ if __name__ == '__main__':
 
     rowsSpinbox.state(['readonly'])
     colsSpinbox.state(['readonly'])
-    rowsSpinbox.set(6)
-    colsSpinbox.set(6)
-    animationSpeedSlider.set(15)
+    rowsSpinbox.set(defaultDims[0])
+    colsSpinbox.set(defaultDims[1])
+    animationSpeedSlider.set(defaultSpeed)
 
     # then draw the data onto the canvas
     # initially draw the canvas and maze
-    canvas.create_rectangle(0, 0, 304, 304, fill='white')
-    mData.drawMaze(canvas)
+    canvas.create_rectangle(0, 0, canvas.winfo_width(),
+                            canvas.winfo_height(), fill='white')
+    mData.drawMaze(canvas, canvas.winfo_width() + cData.resizeRedrawDelay,
+                   canvas.winfo_height() + cData.resizeRedrawDelay)
     # add event binding to handle canvas resizing
-    root.bind('<Configure>', lambda e: cData.redrawCanvas(canvas, mData))
+    root.bind('<Configure>', lambda e: cData.resizeCanvas(canvas, mData))
 
     root.mainloop()
     print('done')
@@ -259,9 +170,8 @@ if __name__ == '__main__':
 # things might not exist on a global scope anymore,
 # so that might potentially cause problems
 
+# maybe should have stored things like root, mainframe, buttons, etc. in an object instead of in variables, so you can pass the object around easily?
 
 
-
-# Add configure buttons for the animation and algorithm,
-# which will create new windows to set those properties
-# then commit
+# maybe use activefill and activewidth attributes for lines??
+# probably not

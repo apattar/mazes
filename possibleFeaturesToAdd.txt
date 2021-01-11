@@ -1,0 +1,7 @@
+Would there be a way to have the margins of the maze change
+if the aspect ratio of each cell does not fall within some
+set boundary? Or have them always be squares?
+aspect ratio thing is good because if they were always squares,
+could end up with some weird spacing, but people like squares
+this would not be that much of a problem to add - just
+would have to revamp logic in drawMaze - would be cool!
