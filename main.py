@@ -22,12 +22,15 @@ if __name__ == '__main__':
 
     defaultDims = (7,10)
     defaultSpeed = 15   # from 1 to 30
+    defaultCanvasWidth = 504
+    defaultCanvasHeight = 354
+    redrawDelay = 1
 
     # create the object instances that will store all the data
     mData = MazeData(defaultDims, 
                       set([-6, -7]), 0, defaultDims[0]*defaultDims[1] - 1)
     stateData = ApplicationStateData()
-    cData = CanvasData(10)
+    cData = CanvasData(redrawDelay)
 
     # initialize algorithm options, and set value of algorithm StringVar
     # initialize animation options, and set display accordingly
@@ -44,13 +47,22 @@ if __name__ == '__main__':
 
     genControlsFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
     clearButton = ttk.Button(genControlsFrame, text='Clear Maze',
-                            command=mData.clearMaze)
+                            command=lambda: mData.clearMaze(stateData,
+                                            canvas,
+                                            canvas.winfo_width(),
+                                            canvas.winfo_height()))
     rowsLabel = ttk.Label(genControlsFrame, text='Rows: ')
-    rowsSpinbox = ttk.Spinbox(genControlsFrame, from_=1.0, to=30.0,
-                            command=lambda: mData.updateRows(rowsSpinbox, canvas))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
+    rowsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
+                            command=lambda: mData.updateRows(rowsSpinbox,
+                                            canvas,
+                                            canvas.winfo_width(),
+                                            canvas.winfo_height()))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
     colsLabel = ttk.Label(genControlsFrame, text='Columns: ')
-    colsSpinbox = ttk.Spinbox(genControlsFrame, from_=1.0, to=30.0,
-                            command=lambda: mData.updateCols(colsSpinbox, canvas))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
+    colsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
+                            command=lambda: mData.updateCols(colsSpinbox,
+                                            canvas,
+                                            canvas.winfo_width(),
+                                            canvas.winfo_height()))    # TODO disable when there's user-inputted stuff on the maze, or an animation running
     # use rowsSpinbox.get() to get the value in the spinbox
 
     algDisplayFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
@@ -74,7 +86,8 @@ if __name__ == '__main__':
 
     solgenButton = ttk.Button(mainframe, textvariable=stateData.mode, command=stateData.animate)
 
-    canvas = Canvas(mainframe, width=500, height=350)
+    canvas = Canvas(mainframe, width=defaultCanvasWidth,
+                    height=defaultCanvasHeight)
 
 
 
@@ -107,7 +120,7 @@ if __name__ == '__main__':
     colsLabel.grid(row=2, column=0, sticky='new', padx=5, pady=(5,10))
     colsSpinbox.grid(row=2, column=1, sticky='new', padx=5, pady=(5,10))
 
-    algDisplayFrame.grid(row=2, column=0, sticky='new', padx=5, pady=5)
+    algDisplayFrame.grid(row=2, column=0, sticky='ews', padx=5, pady=5)
     algSupLabel.grid(row=0, column=0, sticky='nsw', padx=5, pady=5)
     algMainLabel.grid(row=1, column=0, sticky='nsew', padx=5, pady=(5,10))
     configAlgButton.grid(row=0, rowspan=2, column=1, sticky='nsew', padx=5, pady=5)
@@ -125,7 +138,7 @@ if __name__ == '__main__':
     mainframe.rowconfigure(0, weight=1)
     mainframe.rowconfigure(1, weight=50)
     mainframe.rowconfigure(2, weight=50)
-    mainframe.rowconfigure(3, weight=50)
+    mainframe.rowconfigure(3, weight=5)
     mainframe.columnconfigure(0, weight=1)
     mainframe.columnconfigure(1, weight=50)
     modeButtonsFrame.rowconfigure(0, weight=1)
@@ -156,12 +169,24 @@ if __name__ == '__main__':
 
     # then draw the data onto the canvas
     # initially draw the canvas and maze
-    canvas.create_rectangle(0, 0, canvas.winfo_width(),
-                            canvas.winfo_height(), fill='white')
-    mData.drawMaze(canvas, canvas.winfo_width() + cData.resizeRedrawDelay,
-                   canvas.winfo_height() + cData.resizeRedrawDelay)
+    canvas.create_rectangle(0, 0, defaultCanvasWidth,
+                            defaultCanvasHeight, fill='white')
+    mData.drawMaze(canvas, defaultCanvasWidth, defaultCanvasHeight)
     # add event binding to handle canvas resizing
-    root.bind('<Configure>', lambda e: cData.resizeCanvas(canvas, mData))
+    canvas.bind('<Configure>', lambda e: cData.resizeCanvas(canvas, mData))
+    canvas.bind('<Motion>', lambda e: cData.mouseHovering(canvas, e,
+                                                          stateData.mode.get(),
+                                                          mData))
+    canvas.bind('<B1-Motion>', lambda e: cData.mouseDragging(canvas, e,
+                            stateData.mode.get(),
+                            mData,
+                            canvas.winfo_width(),
+                            canvas.winfo_height()))
+    canvas.bind('<ButtonPress-1>', lambda e: cData.mouseClicked(canvas, e,
+                            stateData.mode.get(),
+                            mData,
+                            canvas.winfo_width(),
+                            canvas.winfo_height()))
 
     root.mainloop()
     print('done')
@@ -175,3 +200,14 @@ if __name__ == '__main__':
 
 # maybe use activefill and activewidth attributes for lines??
 # probably not
+
+
+
+
+
+# figure out event bindings for the canvas - hovering, and
+# adding boundaries
+# bindings go just above here, functions that are called
+# might go in canvasData? Maybe they can draw the hover lines
+# on top of the maze, and then they can update the mData object
+# and call drawMaze with a mData object that's passed in?

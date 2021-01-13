@@ -19,3 +19,4 @@ def displayWidthHeight(canvas):
 
 root.bind('<Configure>', lambda e: displayWidthHeight(canvas))
 root.mainloop()
+

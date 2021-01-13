@@ -5,3 +5,45 @@ aspect ratio thing is good because if they were always squares,
 could end up with some weird spacing, but people like squares
 this would not be that much of a problem to add - just
 would have to revamp logic in drawMaze - would be cool!
+- find max(dims[0], dims[1]) and have the margins be based on which is
+the greatest; then determine the dimensions of the cell based on that,
+and put other margins based on that
+
+
+boundary updating when rows and cols are updated by user
+
+
+when clicking and dragging to make boundaries in solve mode,
+have default setting be adding or removing based on which
+square the user started in - as it is now, it's always adding
+when dragging
+
+more on dragging: have a way to circumvent the extra
+vertical lines a user might get when they try to
+click and drag to create a long horizontal boundary
+
+
+
+
+
+TO PREVENT LAGGING:
+
+have different boundary list for left bounds and right bounds? Might
+help with lagging? Or try some different data structure instead of set?
+- make sure to change what the boundary thing is initialized to
+- when the Clear Maze button is pressed
+
+- change redrawDelay based on the size of the boundaries set?
+for lagging purposes
+
+
+ONLY DRAW what needs to be drawn, like just the boundaries
+only pass in the parts of mazeData to the hover, click, & drag functions
+that you absolutely need
+
+
+
+
+Changes made:
+- instead of calling drawMaze in mouseClicked, called drawBoundaries
+- made sure all entries in boundaries are ints
