@@ -38,12 +38,20 @@ for lagging purposes
 
 
 ONLY DRAW what needs to be drawn, like just the boundaries
-only pass in the parts of mazeData to the hover, click, & drag functions
-that you absolutely need
+
+Maybe saving boundaries as row and col pairs would be better, since
+they have to be converted back and forth each time a new boundary is added
+or drawn onto the canvas
 
 
-
-
-Changes made:
+Changes made when there was a substantial decrease in lagging:
 - instead of calling drawMaze in mouseClicked, called drawBoundaries
 - made sure all entries in boundaries are ints
+I think that probably, the looping through all the boundaries (O(b)) is what
+makes up the majority of the computation in each drawMaze call
+
+
+
+AT THE END:
+only pass in the parts of mazeData to the hover, click, & drag functions
+that you absolutely need

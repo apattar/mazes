@@ -1,6 +1,8 @@
 from tkinter import *
 from tkinter import ttk
-from objects import *
+from applicationStateData import *
+from mazeData import *
+from canvasData import *
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
@@ -84,7 +86,14 @@ if __name__ == '__main__':
                                   command=configAnimButtonPushed)
 
 
-    solgenButton = ttk.Button(mainframe, textvariable=stateData.mode, command=stateData.animate)
+    solgenButton = ttk.Button(mainframe, 
+                              textvariable=stateData.solgenButtonText,
+                              command=lambda: stateData.startAnimateMode(
+                                solgenButton,
+                                solveModeButton, genModeButton,
+                                clearButton, rowsSpinbox, colsSpinbox,
+                                animationSpeedSlider,
+                                configAlgButton, configAnimButton))
 
     canvas = Canvas(mainframe, width=defaultCanvasWidth,
                     height=defaultCanvasHeight)
@@ -175,18 +184,20 @@ if __name__ == '__main__':
     # add event binding to handle canvas resizing
     canvas.bind('<Configure>', lambda e: cData.resizeCanvas(canvas, mData))
     canvas.bind('<Motion>', lambda e: cData.mouseHovering(canvas, e,
-                                                          stateData.mode.get(),
-                                                          mData))
+                                            stateData.mode, mData, 
+                                            stateData.animationRunning))
     canvas.bind('<B1-Motion>', lambda e: cData.mouseDragging(canvas, e,
-                            stateData.mode.get(),
+                            stateData.mode,
                             mData,
                             canvas.winfo_width(),
-                            canvas.winfo_height()))
+                            canvas.winfo_height(),
+                            stateData.animationRunning))
     canvas.bind('<ButtonPress-1>', lambda e: cData.mouseClicked(canvas, e,
-                            stateData.mode.get(),
+                            stateData.mode,
                             mData,
                             canvas.winfo_width(),
-                            canvas.winfo_height()))
+                            canvas.winfo_height(),
+                            stateData.animationRunning))
 
     root.mainloop()
     print('done')
