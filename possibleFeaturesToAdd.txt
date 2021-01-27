@@ -27,6 +27,9 @@ click and drag to create a long horizontal boundary
 
 
 TO PREVENT LAGGING:
+- maybe at the end, measure timings of certain operations,
+make some of these changes, and see if they make things better
+(like learn how to use python time module)
 
 have different boundary list for left bounds and right bounds? Might
 help with lagging? Or try some different data structure instead of set?
@@ -44,14 +47,44 @@ they have to be converted back and forth each time a new boundary is added
 or drawn onto the canvas
 
 
-Changes made when there was a substantial decrease in lagging:
-- instead of calling drawMaze in mouseClicked, called drawBoundaries
-- made sure all entries in boundaries are ints
-I think that probably, the looping through all the boundaries (O(b)) is what
-makes up the majority of the computation in each drawMaze call
 
 
 
-AT THE END:
-only pass in the parts of mazeData to the hover, click, & drag functions
-that you absolutely need
+
+
+maybe have a new ui label that has instructions when animation not running,
+says 'solving...' or 'generating...' when animation is running,
+says 'no solution found' or 'solution found!' once animation finishes,
+and might say other things
+
+
+bind enter key to starting the animation
+
+
+Have the colors used to draw traversalLog lines change in a gradient
+based on how recently it was found, so the deeper you search
+the more of a certain color you get!
+
+
+
+Once done, make buttons different colors to make ui more interesting
+and easier to read - make backgrounds of each frame different colors
+- take a hot minute to read about styles
+- (how to center justify text in buttons?)
+- buttons - add config option cursor='hand2'
+- when animation is running, make backgrounds for fully disabled frames
+the default color, but keep frames that still have available controls
+keep their new color
+- I think that red button was supposed to be a record button. Also,
+I'm not actually digging the black borders around the images
+
+
+Once finished everything, try changing cell indexing scheme to (row, col) and
+see if it improves performance
+
+
+fully remove redrawDelay if it ends up staying just at 1 to make code cleaner
+
+
+Maybe have a tutorial to introduce the features; this is probably
+what anybody looking at this to evaluate me would see first

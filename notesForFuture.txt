@@ -1,0 +1,24 @@
+
+Changes made when there was a substantial decrease in lagging:
+- instead of calling drawMaze in mouseClicked, called drawBoundaries
+- made sure all entries in boundaries are ints
+I think that probably, the looping through all the boundaries (O(b)) is what
+makes up the majority of the computation in each drawMaze call
+^^ why thinking about asymptotic complexity is important
+
+- fixed scope issues; just had everything stored globally
+
+
+
+Notes on overall coding style:
+- I think you only included __init__ functions for your objects
+because you felt like you needed to. For your use case,
+since you aren't making multiple of the objects, init functions
+were useless; you could just have used structs and
+put specifications for each object in comments
+- You only included if __name__ == '__main__' also since
+you felt like you needed to. Was not necessary (since that
+file will not need to be imported by anything) and created
+scope issues - this is why you ended up needing to pass stuff
+around a lot, which was unnecessary, made things laggier than
+they needed to be, and made things harder for you
