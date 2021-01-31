@@ -1,14 +1,43 @@
 from tkinter import *
 from tkinter import ttk
-# from applicationStateData import *
-# from mazeData import *
-# from canvasData import *
+from tkinter import font
+from random import shuffle
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
 
+
+class vcAnimationData(object):
+    def __init__(self):
+        self.queue = [mData.startCell]
+        # TODO continue
+
+class ecAnimationData(object):
+    def __init__(self):
+        self.unionFind = [-1] * (mData.rows*mData.cols)
+        self.unchecked = list(range(-1, -mData.cols, -1))
+        for i in range(mData.cols, mData.rows*mData.cols, mData.cols):
+            self.unchecked.append(i)
+            for j in range(i+1, i+mData.cols):
+                self.unchecked.append(j)
+                self.unchecked.append(-j)
+        mData.boundaries = set(self.unchecked.copy())
+        shuffle(self.unchecked)
+        self.done = False
+    
+    def __repr__(self):
+        return f'unchecked: {self.unchecked}\nunion find: {self.unionFind}\n\
+bounds: {mData.boundaries}'
+        # TODO remove
+
+
 class SimpleSearchAnimationData(object):
-    dfsOrder = ['Up', 'Down', 'Right', 'Left']      # TODO for later
+    dfsNeighborFuncs = []   # stored in order of execution
+                            # which, since stack, means
+                            # neighbors examined in reverse
+    bfsNeighborFuncs = []   # stored in order of execution
+                            # which, since queue, means
+                            # neighbors examined in order
 
     def __init__(self, start):
         self.currWithParent = (start, start)
@@ -32,6 +61,50 @@ class SimpleSearchAnimationData(object):
                     self.solution.append(unused[curr])
                     del unused[curr]
                 unused[self.traversalLog[i][0]] = self.traversalLog[i][1]
+
+    @staticmethod
+    def initDfsBfsFuncs():
+        # check upper neighbor if exists
+        def checkUpper(curr):
+            upper = curr - mData.cols
+            if (upper not in MazeData.ad.seen and \
+                curr not in mData.boundaries and \
+                upper >= 0):
+                MazeData.ad.seen.add(upper)
+                MazeData.ad.worklistWithParents.append((upper, curr))
+        
+        # check lower neighbor if exists
+        def checkLower(curr):
+            lower = curr + mData.cols
+            if (lower not in MazeData.ad.seen and \
+                lower not in mData.boundaries and \
+                lower < mData.rows*mData.cols):
+                MazeData.ad.seen.add(lower)
+                MazeData.ad.worklistWithParents.append((lower, curr))
+
+        # check neighbor to left if exists
+        def checkLeft(curr):
+            left = curr - 1
+            if (left not in MazeData.ad.seen and \
+                -curr not in mData.boundaries and \
+                curr % mData.cols != 0):
+                MazeData.ad.seen.add(left)
+                MazeData.ad.worklistWithParents.append((left, curr))
+
+        # check neighbor to right if exists
+        def checkRight(curr):
+            right = curr + 1
+            if (right not in MazeData.ad.seen and \
+                -right not in mData.boundaries and \
+                (curr+1) % mData.cols != 0):
+                MazeData.ad.seen.add(right)
+                MazeData.ad.worklistWithParents.append((right, curr))
+
+        SimpleSearchAnimationData.dfsNeighborFuncs = [checkUpper,
+                                checkLeft, checkRight, checkLower]
+
+        SimpleSearchAnimationData.bfsNeighborFuncs = [checkLower,
+                                checkRight, checkLeft, checkUpper]
 
 class asVtx(object):
     def __init__(self, g, h, f, loc, parent):
@@ -129,80 +202,111 @@ class asAnimationData(object):
         print('Solution: ' + str(self.solution))
 
 class ApplicationStateData(object):
-    solveAlgorithms = ['dfs', 'bfs', 'as']   # dijkstra?
-    genAlgorithms = ['ec', 'vc']    # possibly more?
+    currSolAlg = 0  # holds index of current sol algorithm
+    currGenAlg = 0  # holds index of current gen algorithm
+    solveAlgorithms = ('DFS', 'BFS', 'A*')   # dijkstra?
+    genAlgorithms = ('Edge-centric', 'Vertex-centric')    # possibly more?
 
     def __init__(self):
-        self.solgenButtonText = StringVar()
-        # self.mode = 'sol'
-        self.setSolveMode()     # ***initializes self.mode***
+        self.solgenButtonText = StringVar(value='Solve')
+        self.currentAlgorithm = StringVar(value='A*')
+        self.mode = 'sol'
         self.animationRunning = BooleanVar(value=False)
-        self.animStepModeOn = False
-        self.currentAlgorithm = StringVar(value='as')
+        self.animMode = StringVar(value='step')     # TODO set to default
         # don't need to store some of these things twice - can just access them directly from the widget
     
     def setSolveMode(self):
+        self.currentAlgorithm.set(
+            stateData.solveAlgorithms[stateData.currSolAlg])
+        algCombobox['values'] = stateData.solveAlgorithms
         self.solgenButtonText.set('Solve')
         self.mode = 'sol'
         # extend!!!
         # updates state to solve mode
         # also deals with mode button appearance
-        # set algorithm
     
     def setGenerateMode(self):
+        self.currentAlgorithm.set(
+            stateData.genAlgorithms[stateData.currGenAlg])
+        algCombobox['values'] = stateData.genAlgorithms
         self.solgenButtonText.set('Generate')
         self.mode = 'gen'
         # updates state to generate mode
         # also deals with mode button appearance
-    
 
-
+    def algorithmChanged(self, e):
+        algCombobox.selection_clear()
+        if self.mode == 'sol':
+            stateData.currSolAlg = stateData.solveAlgorithms.index(
+                stateData.currentAlgorithm.get())
+        else:
+            stateData.currGenAlg = stateData.genAlgorithms.index(
+                stateData.currentAlgorithm.get())
 
     def startAnimateMode(self):
         # TODO could just put all of this in mData.animate... maybe not
         # for the sake of modularity?
         self.animationRunning.set(True)
         solgenButton.grid_remove()
-        pausePlayButton.config(image=pauseImage, command=self.pauseAnimation)
-        pausePlayButton.grid()
-        stopButton.grid()
+        
+        # add animation widgets to screen based on animation mode
+        if self.animMode.get() == 'default':
+            pausePlayButton.state(['!disabled'])
+            pausePlayButton.config(image=pauseImage, command=self.pauseAnimation)
+            pausePlayButton.grid()
+            stopButton.grid(sticky='nse', columnspan=1)
+        elif self.animMode.get() == 'step':
+            arrowButton.state(['!disabled'])
+            arrowButton.grid()
+            stopButton.grid(sticky='nse', columnspan=1)
+        else:
+            print('running')
+            stopButton.grid(sticky='', columnspan=2)
 
-        # disable ui widgets
+        # disable widgets
         solveModeButton.state(['disabled'])
         genModeButton.state(['disabled'])
         clearButton.state(['disabled'])
         rowsSpinbox.state(['disabled'])
         colsSpinbox.state(['disabled'])
-        # animationSpeedSlider.state(['disabled'])
+        algCombobox.state(['disabled'])
         configAlgButton.state(['disabled'])
         configAnimButton.state(['disabled'])
 
-        # TODO change appearance of frames and such?
-
-        # animationSpeedSlider.get() -- use when programming in
+        if self.mode == 'sol':
+            infoLabelText.set('Solving...')
+        else:
+            infoLabelText.set('Generating...')
 
         print('startAnimateMode called')
         print('starting the animation...')
 
         mData.animate()
 
+    # called when the pausePlayButton is pressed while animation is playing
     def pauseAnimation(self):
-        # called when the pausePlayButton is pressed while animation is playing
         self.animationRunning.set(False)
         pausePlayButton.config(image=playImage, command=self.playAnimation)
+        infoLabelText.set('Animation paused.')
 
+    # called when the pausePlayButton is pressed while animation is paused
     def playAnimation(self):
-        # called when the pausePlayButton is pressed while animation is paused
         self.animationRunning.set(True)
         pausePlayButton.config(image=pauseImage, command=self.pauseAnimation)
+        infoLabelText.set('Solving...')
 
+    # called when the stopButton is pressed
     def stopAnimateMode(self):
-        # called when the stopButton is pressed
         MazeData.ad = None
         self.animationRunning.set(True)
         self.animationRunning.set(False)
-        pausePlayButton.grid_remove()
+
+        # remove animation widgets from screen based on animation mode
         stopButton.grid_remove()
+        if self.animMode.get() == 'default':
+            pausePlayButton.grid_remove()
+        elif self.animMode.get() == 'step':
+            arrowButton.grid_remove()
         solgenButton.grid()
 
         # enable all widgets
@@ -211,30 +315,268 @@ class ApplicationStateData(object):
         clearButton.state(['!disabled'])
         rowsSpinbox.state(['!disabled'])
         colsSpinbox.state(['!disabled'])
-        # animationSpeedSlider.state(['!disabled'])
+        algCombobox.state(['!disabled'])
         configAlgButton.state(['!disabled'])
         configAnimButton.state(['!disabled'])
         
+        infoLabelText.set('Welcome!')
+        
         # clear animation
         canvas.delete(*canvas.find_withtag('d'))
+        canvas.delete(*canvas.find_withtag('b'))
+        mData.drawMaze()
 
         print('stopAnimateMode called')
-    
-    def stepAnimation(self):
-        pass
-        # advances animation, and redraws stuff
-        # stuff should probably be drawn within drawMaze. Hear me out:
-        # will handle resizing and everything
-        # is sort of a different case than the hovering
 
-        # when drawing lines representing solving the maze,
-        # check out the Tk line options (joinstyle, smooth, etc.)
-    
-    def configAnimButtonPushed(self):
-        pass
+    def closeAuxWindow(self, window):
+        print(f'closing {window}')
+        root.deiconify()
+
+        # position root in same location as window TODO center - simple!
+        root.update_idletasks()
+        rootGeom = root.geometry()
+        a = rootGeom.find('+')
+        b = rootGeom.find('-')
+        if b == -1:
+            rootGeom = rootGeom[:a]
+        elif a == -1:
+            rootGeom = rootGeom[:b]
+        else:
+            rootGeom = rootGeom[:a] if a < b else rootGeom[:b]
+        windowGeom = window.geometry()
+        a = windowGeom.find('+')
+        b = windowGeom.find('-')
+        if b == -1:
+            windowGeom = windowGeom[a:]
+        elif a == -1:
+            windowGeom = windowGeom[b:]
+        else:
+            windowGeom = windowGeom[a:] if a < b else windowGeom[b:]
+        root.geometry(rootGeom + windowGeom)
+
+        window.destroy()
+
+    def applyAlgSettings(self, window, tempAlgVal):
+        stateData.currentAlgorithm.set(tempAlgVal)
+        self.closeAuxWindow(window)
+
+    def applyAnimSettings(self, window):
+        if self.animMode.get() == 'default':
+            animationSpeedSlider.state(['!disabled'])
+            animationSpeedLabel.state(['!disabled'])
+        else:
+            animationSpeedSlider.state(['disabled'])
+            animationSpeedLabel.state(['disabled'])
+        self.closeAuxWindow(window)
+
+    # configure text of info labels
+    def resetAlgSettingsInterfaceLayout(self, cb, infoIntroLabel, infoLabel, alg, settingsFrame):
+        cb.selection_clear()
+
+        # clear the settings frame
+        for widget in settingsFrame.winfo_children():
+            widget.grid_forget()
+
+        # make changes to widgets
+        if alg == 'DFS':
+            infoIntroLabel.config(text="""\
+Depth-first search, or DFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""\
+Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A stack is used to keep track of which nodes to visit next, which means that a path that stems from one neighbor of a node is followed as far as possible before a different neighbor is examined. Consult a search engine for a simpler or more in-depth explanation.
+
+The nature of DFS is such that the order in which the neighbors of nodes are examined plays a large part in how long the algorithm takes to find a path. You can change the order that neighbors of nodes are examined below:""")
+
+            l = ttk.Label(settingsFrame, text='placeholder').grid(sticky='nsew', padx=5, pady=5)
+            # TODO ideas for interface based on widgets that I have access to
+            # - have buttons to select and move around text
+            # - have four comboboxes, but when they're changed the other
+            #   corresponding combobox changes so there's just one order
+            # - you could use event listeners and a canvas to make a cool
+            #   drag and drop interface 
+
+            # if you end up with time, do the drag and drop thing
+            # try it as fast as possible
+            # if not, do the combobox thing
+
+        elif alg == 'BFS':
+            infoIntroLabel.config(text="""\
+Breadth-first search, or BFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""\
+Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A queue is used to keep track of which nodes to visit next, which means that all neighbors of a node are examined before any of the neighbors' neighbors are examined; in other words, the nodes of the graph are traversed 'level by level'. Consult a search engine for a simpler or more in-depth explanation.
+
+In BFS, since all neighbors are examined at once, the order in which the neighbors of nodes are examined doesn't play a very large role in the algorithm's speed; however, it does have an effect. You can change the order that neighbors of nodes are examined below:""")
+        
+        # add extra settings here for bfs
+        
+        elif alg == 'A*':
+            infoIntroLabel.config(text="""\
+A* (pronounced 'ay-star') is a graph pathfinding algorithm that is always guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""\
+Like in DFS and BFS, neighboring nodes are examined beginning with the start node until the end node is reached. As each node is examined, however, data that describes the path taken to get there from the start node is retained. Using this data, each node's 'f-cost' is calculated, which is the sum of the distance traveled to get there (the node's 'g-cost') and the distance from there to the end node (the node's 'h-cost'). The node with the lowest f-cost is always examined next, which always results in the shortest possible path from start to finish. Consult a search engine for a simpler or more in-depth explanation.
+
+A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS, since lots of extra data must be stored for each node (its parent node, g-cost, h-cost, and f-cost). Despite this, a shortest possible path will always be found (there may be multiple). You can choose to display additional data about each node as the algorithm runs below:""")
+
+            # add extra settings here for A*
+
+        elif alg == 'Edge-centric':
+            pass    # TODO generate stuff
+        elif alg == 'Vertex-centric':
+            pass
 
     def configAlgButtonPushed(self):
-        pass
+        print('opening configAlg window')
+        root.withdraw()
+        algRoot = Toplevel(root)
+        algRoot.title('Algorithm Options')
+        algRoot.protocol('WM_DELETE_WINDOW', lambda:
+            self.closeAuxWindow(algRoot))
+
+        # create widgets
+        currAlgFrame = ttk.Frame(algRoot)
+        currAlgLabel = ttk.Label(currAlgFrame, text='Algorithm:')
+        tempAlg = StringVar(value=stateData.currentAlgorithm.get())
+        localAlgCombobox = ttk.Combobox(currAlgFrame, textvariable=tempAlg)
+        localAlgCombobox['values'] = stateData.solveAlgorithms \
+            if stateData.mode == 'sol' else stateData.genAlgorithms
+        infoLabelFrame = ttk.Labelframe(algRoot, text='Info')
+        infoIntroLabel = ttk.Label(infoLabelFrame, font=largerFont,
+                                    style='InfoLabel.TLabel')
+        infoLabel = ttk.Label(infoLabelFrame, style='InfoLabel.TLabel')
+        settingsFrame = ttk.Frame(algRoot, relief='sunken')
+        cancelButton = ttk.Button(algRoot, text='Cancel', command=lambda:
+            self.closeAuxWindow(algRoot))
+        applyButton = ttk.Button(algRoot, text='Apply', command=lambda:
+            self.applyAlgSettings(algRoot, tempAlg.get()))
+
+        self.resetAlgSettingsInterfaceLayout(localAlgCombobox, infoIntroLabel,
+            infoLabel, tempAlg.get(), settingsFrame)
+
+        algRoot.bind('<<ComboboxSelected>>', lambda e:
+            self.resetAlgSettingsInterfaceLayout(localAlgCombobox,
+                                infoIntroLabel, infoLabel, tempAlg.get(),
+                                settingsFrame))
+
+        currAlgFrame.grid(row=0, column=0, columnspan=3, sticky='nsew', padx=5, pady=5)
+        currAlgLabel.grid(row=0, column=0, padx=5, pady=5)
+        localAlgCombobox.grid(row=0, column=1, padx=5, pady=5)
+        infoLabelFrame.grid(row=1, column=0, columnspan=3, sticky='nsew', padx=5, pady=5)
+        infoIntroLabel.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        infoLabel.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
+        settingsFrame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=5, pady=5)
+        cancelButton.grid(row=3, column=1, sticky='se', padx=5, pady=10)
+        applyButton.grid(row=3, column=2, sticky='sw', padx=5, pady=10)
+
+        algRoot.rowconfigure(0, weight=1)
+        algRoot.rowconfigure(1, weight=100)
+        algRoot.rowconfigure(2, weight=1)
+        algRoot.rowconfigure(3, weight=1)
+        algRoot.columnconfigure(0, weight=100)
+        algRoot.columnconfigure(1, weight=1)
+        algRoot.columnconfigure(2, weight=1)
+        infoLabelFrame.rowconfigure(0, weight=1)
+        infoLabelFrame.rowconfigure(1, weight=50)
+        infoLabelFrame.columnconfigure(0, weight=1)
+
+        # position in same location as root TODO center - simple!
+        algRoot.update_idletasks()
+        algGeom = algRoot.geometry()
+        algGeom = algGeom[:algGeom.find('+')]
+        rootGeom = root.geometry()
+        a = rootGeom.find('+')
+        b = rootGeom.find('-')
+        if b == -1:
+            rootGeom = rootGeom[a:]
+        elif a == -1:
+            rootGeom = rootGeom[b:]
+        else:
+            rootGeom = rootGeom[a:] if a < b else rootGeom[b:]
+        algRoot.geometry(algGeom + rootGeom)
+    
+    def configAnimButtonPushed(self):
+        print('opening configAlg window')
+        root.withdraw()
+        animRoot = Toplevel(root)
+        animRoot.title('Animation Options')
+        animRoot.protocol('WM_DELETE_WINDOW', lambda:
+            self.applyAnimSettings(animRoot))
+
+        # create widgets
+        instrLabel = ttk.Label(animRoot, text='Choose an animation mode below.',
+                                font=largerFont)
+        defaultFrame = ttk.Frame(animRoot)
+        defaultRadiobutton = ttk.Radiobutton(defaultFrame, text='Default Mode',
+            variable=stateData.animMode, value='default')
+        defaultDesc = ttk.Label(defaultFrame, text='''\
+In this mode, animations run automatically upon clicking 'Solve' or 'Generate'. The speed that the animation runs can be controlled using the 'Animation Speed' slider, and the animations can be paused. When the button with a square is pressed, the animation is ended and the maze is cleared.''',
+                            style='InfoLabel.TLabel')
+        stepFrame = ttk.Frame(animRoot)
+        stepRadiobutton = ttk.Radiobutton(stepFrame, text='Step Mode',
+            variable=stateData.animMode, value='step')
+        stepDesc = ttk.Label(stepFrame, text='''\
+In this mode, only one step of the animation is performed at a time. Click the arrow button to advance to the next step.''',
+                            style='InfoLabel.TLabel')
+        jumpFrame = ttk.Frame(animRoot)
+        jumpRadiobutton = ttk.Radiobutton(jumpFrame, text='Jump to End Mode',
+            variable=stateData.animMode, value='jump')
+        jumpDesc = ttk.Label(jumpFrame, text='''\
+In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, where the state of the auxiliary data for the algorithm as well as the green solution line is shown.''',
+                            style='InfoLabel.TLabel')
+        solutionFrame = ttk.Frame(animRoot)
+        solutionRadiobutton = ttk.Radiobutton(solutionFrame, text='Solution Only Mode',
+            variable=stateData.animMode, value='solution')
+        solutionDesc = ttk.Label(solutionFrame, text='''\
+In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, and only the green solution line is shown. If there is no solution, the state of all the algorithm's auxiliary data is shown at the point where the algorithm failed.''',
+                            style='InfoLabel.TLabel')
+        okayButton = ttk.Button(animRoot, text='Okay', command=lambda:
+            self.applyAnimSettings(animRoot))
+
+        instrLabel.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        defaultFrame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
+        stepFrame.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
+        jumpFrame.grid(row=3, column=0, sticky='nsew', padx=5, pady=5)
+        solutionFrame.grid(row=4, column=0, sticky='nsew', padx=5, pady=5)
+        okayButton.grid(row=5, column=0, sticky='se', padx=10, pady=10)
+        defaultRadiobutton.grid(row=0, column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+        defaultDesc.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)
+        stepRadiobutton.grid(row=0, column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+        stepDesc.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)
+        jumpRadiobutton.grid(row=0, column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+        jumpDesc.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)
+        solutionRadiobutton.grid(row=0, column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+        solutionDesc.grid(row=1, column=1, sticky='nsew', padx=5, pady=5)
+
+        animRoot.rowconfigure(0, weight=1)
+        animRoot.rowconfigure(1, weight=1)
+        animRoot.rowconfigure(2, weight=1)
+        animRoot.rowconfigure(3, weight=1)
+        animRoot.rowconfigure(4, weight=1)
+        animRoot.rowconfigure(5, weight=1)
+        animRoot.columnconfigure(0, weight=1)
+        defaultFrame.rowconfigure(0, weight=1)
+        defaultFrame.columnconfigure(0, weight=1)
+        defaultFrame.columnconfigure(1, weight=1)
+        stepFrame.rowconfigure(0, weight=1)
+        stepFrame.columnconfigure(0, weight=1)
+        stepFrame.columnconfigure(1, weight=1)
+        jumpFrame.rowconfigure(0, weight=1)
+        jumpFrame.columnconfigure(0, weight=1)
+        jumpFrame.columnconfigure(1, weight=1)
+        solutionFrame.rowconfigure(0, weight=1)
+        solutionFrame.columnconfigure(0, weight=1)
+        solutionFrame.columnconfigure(1, weight=1)
+
+        # position in same location as root TODO center - simple!
+        animRoot.update_idletasks()
+        rootGeom = root.geometry()
+        a = rootGeom.find('+')
+        b = rootGeom.find('-')
+        if b == -1:
+            rootGeom = rootGeom[a:]
+        elif a == -1:
+            rootGeom = rootGeom[b:]
+        else:
+            rootGeom = rootGeom[a:] if a < b else rootGeom[b:]
+        animRoot.geometry('600x650' + rootGeom)
 
 
 class MazeData(object):
@@ -372,34 +714,68 @@ class MazeData(object):
         self.drawCellColors()
         self.drawBoundaries()
         if MazeData.ad:
-            if stateData.currentAlgorithm.get() == 'dfs' or \
-               stateData.currentAlgorithm.get() == 'bfs':
-                mData.drawSimpleSearchAnimation()
+            if stateData.currentAlgorithm.get() == 'DFS' or \
+               stateData.currentAlgorithm.get() == 'BFS':
+                self.drawSimpleSearchAnimation()
+            elif stateData.currentAlgorithm.get() == 'A*':
+                self.drawAsAnimation()
+            elif stateData.currentAlgorithm.get() == 'Edge-centric':
+                if not MazeData.ad.done:
+                    self.drawEcAnimation()
             else:
-                mData.drawAsAnimation()
+                print('hi')
 
     
     def animate(self):
-        if stateData.currentAlgorithm.get() == 'dfs':
+        if stateData.currentAlgorithm.get() == 'DFS':
+            arrowButton.configure(command=mData.stepDfs)
+            MazeData.ad = SimpleSearchAnimationData(self.startCell) # TODO start cell unnecessary here
+            if stateData.animMode.get() == 'default':
+                self.drawSimpleSearchAnimation()
+                root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepDfs())
+            elif stateData.animMode.get() == 'step':
+                self.drawSimpleSearchAnimation()
+            else:
+                self.stepDfs()
+        elif stateData.currentAlgorithm.get() == 'BFS':
+            arrowButton.configure(command=mData.stepBfs)
             MazeData.ad = SimpleSearchAnimationData(self.startCell)
-            self.drawSimpleSearchAnimation()
-            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
-                   lambda: self.stepDfs())
-            # TODO configure step button here to have stepDfs
-            # as its callback, & same for the other cases
-        elif stateData.currentAlgorithm.get() == 'bfs':
-            MazeData.ad = SimpleSearchAnimationData(self.startCell)
-            self.drawSimpleSearchAnimation()
-            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
-                   lambda: self.stepBfs())
-        elif stateData.currentAlgorithm.get() == 'as':
+            if stateData.animMode.get() == 'default':
+                self.drawSimpleSearchAnimation()
+                root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepBfs())
+            elif stateData.animMode.get() == 'step':
+                self.drawSimpleSearchAnimation()
+            else:
+                self.stepBfs()
+        elif stateData.currentAlgorithm.get() == 'A*':
+            arrowButton.configure(command=mData.stepAs)
             MazeData.ad = asAnimationData(self.startCell)
-            self.drawAsAnimation()
-            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+            if stateData.animMode.get() == 'default':
+                self.drawAsAnimation()
+                root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
                    lambda: self.stepAs())
+            elif stateData.animMode.get() == 'step':
+                self.drawAsAnimation()
+            else:
+                self.stepAs()
+        elif stateData.currentAlgorithm.get() == 'Edge-centric':
+            arrowButton.configure(command=mData.stepEc)
+            MazeData.ad = ecAnimationData()
+            if stateData.animMode.get() == 'default':
+                self.drawEcAnimation()
+                root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                   lambda: self.stepEc())
+            elif stateData.animMode.get() == 'step':
+                self.drawEcAnimation()
+            else:
+                self.stepEc()
+        elif stateData.currentAlgorithm.get() == 'Vertex-centric':
+            arrowButton.configure(command=mData.stepVc)
         else:
             print('There was a problem... algorithm not valid')
-            stateData.stopAnimateMode()
+            stateData.stopAnimateMode()     # TODO remove
 
     def stepDfs(self):
         if not MazeData.ad: return
@@ -418,69 +794,43 @@ class MazeData(object):
         # check if curr is the end cell
         if curr == self.endCell:    # maze solved
             MazeData.ad.calculateSolution()
-            print('maze solved!')
-            self.drawSimpleSearchAnimation()
-            # TODO update ui elements
+            if stateData.animMode.get() == 'solution':
+                self.drawSolution()
+            else:
+                self.drawSimpleSearchAnimation()
+                pausePlayButton.state(['disabled'])
+                arrowButton.state(['disabled'])
+            infoLabelText.set('Solution found!')
             return
 
-        # collect neighbors; if unmarked, push them into worklist
-        upper = curr - self.cols
-        lower = curr + self.cols
-        left = curr - 1
-        right = curr + 1
-        noValidNeighbors = True
+        initialSeenLen = len(MazeData.ad.seen)
 
-        # TODO maybe you could put all of these code blocks into
-        # individual functions, passing in data that is updated,
-        # and have the globally stored information be a list of
-        # functions to determine the priority order for dfs
+        # check neighbors in set order; if unmarked, push to worklist
+        for func in SimpleSearchAnimationData.dfsNeighborFuncs:
+            func(curr)
 
-        # check upper neighbor if exists
-        if (upper not in MazeData.ad.seen and \
-            curr not in self.boundaries and \
-            upper >= 0):
-            MazeData.ad.seen.add(upper)
-            MazeData.ad.worklistWithParents.append((upper, curr))
-            noValidNeighbors = False
-
-        # check lower neighbor if exists
-        if (lower not in MazeData.ad.seen and \
-            lower not in self.boundaries and \
-            lower < self.rows*self.cols):
-            MazeData.ad.seen.add(lower)
-            MazeData.ad.worklistWithParents.append((lower, curr))
-            noValidNeighbors = False
-
-        # check neighbor to left if exists
-        if (left not in MazeData.ad.seen and \
-            -curr not in self.boundaries and \
-            curr % self.cols != 0):
-            MazeData.ad.seen.add(left)
-            MazeData.ad.worklistWithParents.append((left, curr))
-            noValidNeighbors = False
-
-        # check neighbor to right if exists
-        if (right not in MazeData.ad.seen and \
-            -right not in self.boundaries and \
-            (curr+1) % self.cols != 0):
-            MazeData.ad.seen.add(right)
-            MazeData.ad.worklistWithParents.append((right, curr))
-            noValidNeighbors = False
-
-        if noValidNeighbors:
+        if len(MazeData.ad.seen) == initialSeenLen:
+            # no valid neighbors
             MazeData.ad.black.append(curr)
         
-        self.drawSimpleSearchAnimation()
+        if stateData.animMode.get() == 'default' or \
+            stateData.animMode.get() == 'step':
+            self.drawSimpleSearchAnimation()
         
         if len(MazeData.ad.worklistWithParents) == 0:     # stack empty; maze unsolvable
-            print('maze unsolvable')
+            pausePlayButton.state(['disabled'])
+            arrowButton.state(['disabled'])
+            self.drawSimpleSearchAnimation()
+            infoLabelText.set('Maze unsolvable.')
             return
-            # TODO update ui state label
 
-        root.update()
-        root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
-                   lambda: self.stepDfs())
-        # TODO if animation is in step mode, don't do this
+        if stateData.animMode.get() == 'default':
+            root.update_idletasks()
+            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepDfs())
+        elif stateData.animMode.get() != 'step':
+            self.stepDfs()
+
 
     def stepBfs(self):
         if not MazeData.ad: return
@@ -499,69 +849,40 @@ class MazeData(object):
         # check if curr is the end cell
         if curr == self.endCell:    # maze solved
             MazeData.ad.calculateSolution()
-            print('maze solved!')
-            self.drawSimpleSearchAnimation()
-            # TODO update ui elements
+            if stateData.animMode.get() == 'solution':
+                self.drawSolution()
+            else:
+                self.drawSimpleSearchAnimation()
+                pausePlayButton.state(['disabled'])
+                arrowButton.state(['disabled'])
+            infoLabelText.set('Solution found!')
             return
 
-        # collect neighbors; if unmarked, push them into worklist
-        upper = curr - self.cols
-        lower = curr + self.cols
-        left = curr - 1
-        right = curr + 1
-        noValidNeighbors = True
+        initialSeenLen = len(MazeData.ad.seen)
 
-        # TODO maybe you could put all of these code blocks into
-        # individual functions, passing in data that is updated,
-        # and have the globally stored information be a list of
-        # functions to determine the priority order for dfs
+        for func in SimpleSearchAnimationData.bfsNeighborFuncs:
+            func(curr)
 
-        # check upper neighbor if exists
-        if (upper not in MazeData.ad.seen and \
-            curr not in self.boundaries and \
-            upper >= 0):
-            MazeData.ad.seen.add(upper)
-            MazeData.ad.worklistWithParents.append((upper, curr))
-            noValidNeighbors = False
-
-        # check lower neighbor if exists
-        if (lower not in MazeData.ad.seen and \
-            lower not in self.boundaries and \
-            lower < self.rows*self.cols):
-            MazeData.ad.seen.add(lower)
-            MazeData.ad.worklistWithParents.append((lower, curr))
-            noValidNeighbors = False
-
-        # check neighbor to left if exists
-        if (left not in MazeData.ad.seen and \
-            -curr not in self.boundaries and \
-            curr % self.cols != 0):
-            MazeData.ad.seen.add(left)
-            MazeData.ad.worklistWithParents.append((left, curr))
-            noValidNeighbors = False
-
-        # check neighbor to right if exists
-        if (right not in MazeData.ad.seen and \
-            -right not in self.boundaries and \
-            (curr+1) % self.cols != 0):
-            MazeData.ad.seen.add(right)
-            MazeData.ad.worklistWithParents.append((right, curr))
-            noValidNeighbors = False
-
-        if noValidNeighbors:
+        if len(MazeData.ad.seen) == initialSeenLen:
             MazeData.ad.black.append(curr)
         
-        self.drawSimpleSearchAnimation()
+        if stateData.animMode.get() == 'default' or \
+            stateData.animMode.get() == 'step':
+            self.drawSimpleSearchAnimation()
         
         if len(MazeData.ad.worklistWithParents) == 0:     # worklist empty; maze unsolvable
-            print('maze unsolvable')
+            pausePlayButton.state(['disabled'])
+            arrowButton.state(['disabled'])
+            self.drawSimpleSearchAnimation()
+            infoLabelText.set('Maze unsolvable.')
             return
-            # TODO update ui state label
 
-        root.update()
-        root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
-                   lambda: self.stepBfs())
-        # TODO if animation is in step mode, don't do this
+        if stateData.animMode.get() == 'default':
+            root.update_idletasks()
+            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepBfs())
+        elif stateData.animMode.get() != 'step':
+            self.stepBfs()
 
     def stepAs(self):
         if not MazeData.ad: return
@@ -575,7 +896,10 @@ class MazeData(object):
         if len(MazeData.ad.openQueue.list) != 0:
             curr = MazeData.ad.openQueue.pop()
         else:   # open queue empty; maze unsolvable
-            print('maze unsolvable')
+            pausePlayButton.state(['disabled'])
+            arrowButton.state(['disabled'])
+            self.drawAsAnimation()
+            infoLabelText.set('Maze unsolvable.')
             return
         
         upper = curr.loc - self.cols
@@ -591,9 +915,13 @@ class MazeData(object):
                 MazeData.ad.closedList.push(curr)
                 MazeData.ad.closedList.push(newVtx)
                 MazeData.ad.calculateSolution()
-                print('maze solved!')
-                self.drawAsAnimation()
-                # TODO update ui elements
+                if stateData.animMode.get() == 'solution':
+                    self.drawSolution()
+                else:
+                    self.drawAsAnimation()
+                    pausePlayButton.state(['disabled'])
+                    arrowButton.state(['disabled'])
+                infoLabelText.set('Solution found!')
                 return
             elif newVtx in MazeData.ad.openQueue.list:
                 if newVtx.f < MazeData.ad.openQueue.getFofVtxWithLoc(upper):
@@ -616,9 +944,13 @@ class MazeData(object):
                 MazeData.ad.closedList.push(curr)
                 MazeData.ad.closedList.push(newVtx)
                 MazeData.ad.calculateSolution()
-                print('maze solved!')
-                self.drawAsAnimation()
-                # TODO update ui elements
+                if stateData.animMode.get() == 'solution':
+                    self.drawSolution()
+                else:
+                    self.drawAsAnimation()
+                    pausePlayButton.state(['disabled'])
+                    arrowButton.state(['disabled'])
+                infoLabelText.set('Solution found!')
                 return
             elif newVtx in MazeData.ad.openQueue.list:
                 if newVtx.f < MazeData.ad.openQueue.getFofVtxWithLoc(lower):
@@ -641,9 +973,13 @@ class MazeData(object):
                 MazeData.ad.closedList.push(curr)
                 MazeData.ad.closedList.push(newVtx)
                 MazeData.ad.calculateSolution()
-                print('maze solved!')
-                self.drawAsAnimation()
-                # TODO update ui elements
+                if stateData.animMode.get() == 'solution':
+                    self.drawSolution()
+                else:
+                    self.drawAsAnimation()
+                    pausePlayButton.state(['disabled'])
+                    arrowButton.state(['disabled'])
+                infoLabelText.set('Solution found!')
                 return
             elif newVtx in MazeData.ad.openQueue.list:
                 if newVtx.f < MazeData.ad.openQueue.getFofVtxWithLoc(left):
@@ -666,9 +1002,13 @@ class MazeData(object):
                 MazeData.ad.closedList.push(curr)
                 MazeData.ad.closedList.push(newVtx)
                 MazeData.ad.calculateSolution()
-                print('maze solved!')
-                self.drawAsAnimation()
-                # TODO update ui elements
+                if stateData.animMode.get() == 'solution':
+                    self.drawSolution()
+                else:
+                    self.drawAsAnimation()
+                    pausePlayButton.state(['disabled'])
+                    arrowButton.state(['disabled'])
+                infoLabelText.set('Solution found!')
                 return
             elif newVtx in MazeData.ad.openQueue.list:
                 if newVtx.f < MazeData.ad.openQueue.getFofVtxWithLoc(right):
@@ -684,12 +1024,101 @@ class MazeData(object):
                 MazeData.ad.openQueue.push(newVtx)
             
         MazeData.ad.closedList.push(curr)
-        self.drawAsAnimation() 
 
-        root.update()   # TODO necessary?
-        root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
-                   lambda: self.stepAs())
-        # TODO if animation is in step mode, don't do this
+        if stateData.animMode.get() == 'default' or \
+            stateData.animMode.get() == 'step':
+            self.drawAsAnimation() 
+
+        if stateData.animMode.get() == 'default':
+            root.update_idletasks()
+            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepAs())
+        elif stateData.animMode.get() != 'step':
+            self.stepAs()
+
+    def stepEc(self):
+        if not MazeData.ad: return
+        if not stateData.animationRunning.get():
+            print('paused')
+            root.wait_variable(stateData.animationRunning)
+            print('unpaused')
+            if not MazeData.ad: return
+        
+        if len(mData.boundaries) == \
+                mData.rows*mData.cols - mData.rows - mData.cols + 1:
+            pausePlayButton.state(['disabled'])
+            arrowButton.state(['disabled'])
+            canvas.delete(*canvas.find_withtag('b'))
+            mData.drawBoundaries()
+            MazeData.ad.done = True
+            infoLabelText.set('Finished!')
+            return
+        
+        curr = MazeData.ad.unchecked.pop(0)
+        if curr > 0:
+            other = curr - mData.cols
+        else:
+            other = -curr - 1
+        
+        currUfIndex = abs(curr)
+        currUf = MazeData.ad.unionFind[currUfIndex]
+        while currUf > 0:
+            currUfIndex = currUf
+            currUf = MazeData.ad.unionFind[currUfIndex]
+        otherUfIndex = other
+        otherUf = MazeData.ad.unionFind[otherUfIndex]
+        while otherUf > 0:
+            otherUfIndex = otherUf
+            otherUf = MazeData.ad.unionFind[otherUfIndex]
+
+        if currUfIndex != otherUfIndex:
+            # cells are unconnected; it's okay to remove the boundary
+            mData.boundaries.remove(curr)
+
+            # update unionFind data structure
+            if currUf < otherUf:
+                MazeData.ad.unionFind[otherUfIndex] = currUfIndex
+            elif otherUf < currUf:
+                MazeData.ad.unionFind[currUfIndex] = otherUfIndex
+            else:
+                # currUf == otherUf
+                # curr will become new root
+                MazeData.ad.unionFind[currUfIndex] -= 1
+                MazeData.ad.unionFind[otherUfIndex] = currUfIndex
+
+        if stateData.animMode.get() == 'default' or \
+            stateData.animMode.get() == 'step':
+            self.drawEcAnimation()
+
+        if stateData.animMode.get() == 'default':
+            root.update_idletasks()
+            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepEc())
+        elif stateData.animMode.get() != 'step':
+            self.stepEc()
+
+    def drawEcAnimation(self):
+        canvas.delete(*canvas.find_withtag('b'))
+        mData.drawBoundaries()
+        boundary = MazeData.ad.unchecked[0]
+        b = abs(boundary)
+        r = b // self.cols
+        c = b % self.cols
+        if boundary > 0:
+            canvas.create_line(cData.margin + (cData.cell_w * c),
+                                cData.margin + (cData.cell_h * r),
+                                cData.margin + (cData.cell_w * (c+1)),
+                                cData.margin + (cData.cell_h * r),
+                                width=5, capstyle='round', fill='red',
+                                tags=('b',))
+        else:
+            canvas.create_line(cData.margin + (cData.cell_w * c),
+                                cData.margin + (cData.cell_h * r),
+                                cData.margin + (cData.cell_w * c),
+                                cData.margin + (cData.cell_h * (r+1)),
+                                width=5, capstyle='round', fill='red',
+                                tags=('b',))
+        print(MazeData.ad)
 
     def drawSimpleSearchAnimation(self):
         curr = MazeData.ad.currWithParent[0]
@@ -708,12 +1137,12 @@ class MazeData(object):
                                cData.margin + ((sr+0.5)*cData.cell_h),
                                cData.margin + ((ec+0.5)*cData.cell_w),
                                cData.margin + ((er+0.5)*cData.cell_h),
-                               width=7, fill='red', capstyle='round',
+                               width=cData.lineWidth, fill='red', capstyle='round',
                                tags=('d'))
-            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                               cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                               cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                               cData.margin + ((sr+0.5)*cData.cell_h) + 10,
+            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                               cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
                                width=0, fill='red', tags=('d'))
 
         # draw dots & lines from traversalLog vertices to their parents
@@ -726,60 +1155,63 @@ class MazeData(object):
                                cData.margin + ((sr+0.5)*cData.cell_h),
                                cData.margin + ((ec+0.5)*cData.cell_w),
                                cData.margin + ((er+0.5)*cData.cell_h),
-                               width=7, fill='blue', capstyle='round',
+                               width=cData.lineWidth, fill='blue', capstyle='round',
                                tags=('d'))
-            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                               cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                               cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                               cData.margin + ((sr+0.5)*cData.cell_h) + 10,
+            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                               cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
                                width=0, fill='blue', tags=('d'))
 
         # draw black dots
         for vtx in MazeData.ad.black:
             r = vtx // self.cols
             c = vtx % self.cols
-            canvas.create_oval(cData.margin + ((c+0.5)*cData.cell_w) - 16,
-                                cData.margin + ((r+0.5)*cData.cell_h) - 16,
-                                cData.margin + ((c+0.5)*cData.cell_w) + 16,
-                                cData.margin + ((r+0.5)*cData.cell_h) + 16,
+            canvas.create_oval(cData.margin + ((c+0.5)*cData.cell_w) - cData.largeCircleRadius,
+                                cData.margin + ((r+0.5)*cData.cell_h) - cData.largeCircleRadius,
+                                cData.margin + ((c+0.5)*cData.cell_w) + cData.largeCircleRadius,
+                                cData.margin + ((r+0.5)*cData.cell_h) + cData.largeCircleRadius,
                                 width=0, fill='black', tags=('d'))
 
         # if finished, draw the solution line
         if MazeData.ad.solution:
             currColor = 'darkgreen'
-
-            # either use a queue to not have to calculate rows & columns
-            # twice for each vertex, or TODO update to reflect new
-            # indexing scheme
-            for i in range(len(MazeData.ad.solution) - 1):
-                sr = MazeData.ad.solution[i] // self.cols
-                sc = MazeData.ad.solution[i] % self.cols
-                er = MazeData.ad.solution[i+1] // self.cols
-                ec = MazeData.ad.solution[i+1] % self.cols
-                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                                cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) + 10,
-                                width=0, fill=rgbString(56, 176, 14),
-                                tags=('d'))
-                canvas.create_line(cData.margin + ((sc+0.5)*cData.cell_w),
-                               cData.margin + ((sr+0.5)*cData.cell_h),
-                               cData.margin + ((ec+0.5)*cData.cell_w),
-                               cData.margin + ((er+0.5)*cData.cell_h),
-                               width=7, fill=rgbString(56, 176, 14),
-                               capstyle='round', tags=('d'))
+            self.drawSolution()
 
         else:
             currColor = 'purple'
 
         # draw curr dot
-        canvas.create_oval(cData.margin + ((curr_c+0.5)*cData.cell_w) - 16,
-                            cData.margin + ((curr_r+0.5)*cData.cell_h) - 16,
-                            cData.margin + ((curr_c+0.5)*cData.cell_w) + 16,
-                            cData.margin + ((curr_r+0.5)*cData.cell_h) + 16,
+        canvas.create_oval(cData.margin + ((curr_c+0.5)*cData.cell_w) - cData.largeCircleRadius,
+                            cData.margin + ((curr_r+0.5)*cData.cell_h) - cData.largeCircleRadius,
+                            cData.margin + ((curr_c+0.5)*cData.cell_w) + cData.largeCircleRadius,
+                            cData.margin + ((curr_r+0.5)*cData.cell_h) + cData.largeCircleRadius,
                             width=0, fill=currColor, tags=('d'))
 
         print(f'curr: {MazeData.ad.currWithParent}\nseen: {MazeData.ad.seen}\ntraversalLog: {MazeData.ad.traversalLog}\nworklist: {MazeData.ad.worklistWithParents}\nblack: {MazeData.ad.black}\n') # TODO remove
+
+    def drawSolution(self):
+        # either use a queue to not have to calculate rows & columns
+        # twice for each vertex, or TODO update to reflect new
+        # indexing scheme
+        for i in range(len(MazeData.ad.solution) - 1):
+            sr = MazeData.ad.solution[i] // self.cols
+            sc = MazeData.ad.solution[i] % self.cols
+            er = MazeData.ad.solution[i+1] // self.cols
+            ec = MazeData.ad.solution[i+1] % self.cols
+            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                            cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                            cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                            cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
+                            width=0, fill=rgbString(56, 176, 14),
+                            tags=('d'))
+            canvas.create_line(cData.margin + ((sc+0.5)*cData.cell_w),
+                            cData.margin + ((sr+0.5)*cData.cell_h),
+                            cData.margin + ((ec+0.5)*cData.cell_w),
+                            cData.margin + ((er+0.5)*cData.cell_h),
+                            width=cData.lineWidth, fill=rgbString(56, 176, 14),
+                            capstyle='round', tags=('d'))
+
 
     def drawAsAnimation(self):
         curr = None
@@ -813,12 +1245,12 @@ class MazeData(object):
                                 cData.margin + ((sr+0.5)*cData.cell_h),
                                 cData.margin + ((ec+0.5)*cData.cell_w),
                                 cData.margin + ((er+0.5)*cData.cell_h),
-                                width=7, fill=color, capstyle='round',
+                                width=cData.lineWidth, fill=color, capstyle='round',
                                 tags=('d'))
-                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                                cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) + 10,
+                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                                cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                                cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                                cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
                                 width=0, fill=color, tags=('d'))
 
         # draw closed stuff with color gradient
@@ -848,39 +1280,19 @@ class MazeData(object):
                                 cData.margin + ((sr+0.5)*cData.cell_h),
                                 cData.margin + ((ec+0.5)*cData.cell_w),
                                 cData.margin + ((er+0.5)*cData.cell_h),
-                                width=7, fill=color, capstyle='round',
+                                width=cData.lineWidth, fill=color, capstyle='round',
                                 tags=('d'))
-                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                                cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) + 10,
+                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                                cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                                cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                                cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
                                 width=0, fill=color, tags=('d'))
 
         # if finished, draw the solution line
         if MazeData.ad.solution:
             curr = mData.endCell
             currColor = 'darkgreen'
-
-            # either use a queue to not have to calculate rows & columns
-            # twice for each vertex, or TODO update to reflect new
-            # indexing scheme
-            for i in range(len(MazeData.ad.solution) - 1):
-                sr = MazeData.ad.solution[i] // self.cols
-                sc = MazeData.ad.solution[i] % self.cols
-                er = MazeData.ad.solution[i+1] // self.cols
-                ec = MazeData.ad.solution[i+1] % self.cols
-                canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) - 10,
-                                cData.margin + ((sc+0.5)*cData.cell_w) + 10,
-                                cData.margin + ((sr+0.5)*cData.cell_h) + 10,
-                                width=0, fill=rgbString(56, 176, 14),
-                                tags=('d'))
-                canvas.create_line(cData.margin + ((sc+0.5)*cData.cell_w),
-                               cData.margin + ((sr+0.5)*cData.cell_h),
-                               cData.margin + ((ec+0.5)*cData.cell_w),
-                               cData.margin + ((er+0.5)*cData.cell_h),
-                               width=7, fill=rgbString(56, 176, 14),
-                               capstyle='round', tags=('d'))
+            self.drawSolution()
         else:
             currColor = 'purple'
 
@@ -888,10 +1300,10 @@ class MazeData(object):
         if curr:
             curr_r = curr // self.cols
             curr_c = curr % self.cols
-            canvas.create_oval(cData.margin + ((curr_c+0.5)*cData.cell_w) - 16,
-                                cData.margin + ((curr_r+0.5)*cData.cell_h) - 16,
-                                cData.margin + ((curr_c+0.5)*cData.cell_w) + 16,
-                                cData.margin + ((curr_r+0.5)*cData.cell_h) + 16,
+            canvas.create_oval(cData.margin + ((curr_c+0.5)*cData.cell_w) - cData.largeCircleRadius,
+                                cData.margin + ((curr_r+0.5)*cData.cell_h) - cData.largeCircleRadius,
+                                cData.margin + ((curr_c+0.5)*cData.cell_w) + cData.largeCircleRadius,
+                                cData.margin + ((curr_r+0.5)*cData.cell_h) + cData.largeCircleRadius,
                                 width=0, fill=currColor, tags=('d'))
 
         print(f'openQueue: {MazeData.ad.openQueue}\nclosedList: {MazeData.ad.closedList}\n')    # TODO remove
@@ -910,6 +1322,9 @@ class MazeData(object):
         # update canvas dimensions
         cData.cell_w = (cData.w - (2*cData.margin)) / self.cols
         cData.cell_h = (cData.h - (2*cData.margin)) / self.rows
+        cData.lineWidth = min(cData.cell_w, cData.cell_h) // 6
+        cData.smallCircleRadius = cData.lineWidth
+        cData.largeCircleRadius = int(cData.smallCircleRadius * 1.5)
         self.drawMaze()
     
     def updateCols(self):
@@ -926,6 +1341,9 @@ class MazeData(object):
         # update canvas dimensions
         cData.cell_w = (cData.w - (2*cData.margin)) / self.cols
         cData.cell_h = (cData.h - (2*cData.margin)) / self.rows
+        cData.lineWidth = min(cData.cell_w, cData.cell_h) // 6
+        cData.smallCircleRadius = cData.lineWidth
+        cData.largeCircleRadius = int(cData.smallCircleRadius * 1.5)
         self.drawMaze()
     
     def updateStartEndCells(self):
@@ -962,6 +1380,9 @@ class CanvasData(object):
         self.margin = min(self.w, self.h) / 10
         self.cell_w = (self.w - 2*self.margin) / mData.rows
         self.cell_h = (self.h - 2*self.margin) / mData.cols
+        self.lineWidth = min(self.cell_w, self.cell_h) // 6
+        self.smallCircleRadius = self.lineWidth
+        self.largeCircleRadius = int(self.smallCircleRadius * 1.5)
 
     def resizeCanvas(self):
         # to be called whenever the screen is resized
@@ -974,9 +1395,11 @@ class CanvasData(object):
             self.margin = min(self.w, self.h) / 10
             self.cell_w = (self.w - 2*self.margin) / mData.cols
             self.cell_h = (self.h - 2*self.margin) / mData.rows
+            self.lineWidth = min(self.cell_w, self.cell_h) // 8
+            self.smallCircleRadius = self.lineWidth
+            self.largeCircleRadius = int(self.smallCircleRadius * 1.5)
 
             mData.drawMaze()
-            # TODO if an animation is running, redraw that too
             self.resizeTracker = 0
 
         
@@ -1169,9 +1592,21 @@ redrawDelay = 1
 pauseImage = PhotoImage(file='images/pause.png')
 playImage = PhotoImage(file='images/start.png')
 stopImage = PhotoImage(file='images/stop.png')
+arrowImage = PhotoImage(file='images/arrow.png')
 pauseImage = pauseImage.subsample(5, 5)
 playImage = playImage.subsample(5, 5)
 stopImage = stopImage.subsample(5, 5)
+arrowImage = arrowImage.subsample(10, 10)
+
+defFont = font.nametofont('TkDefaultFont')
+defFont['size'] += 2
+largerFont = font.Font(family=defFont['family'],
+                        name='largerFont', size=(defFont['size']+5))
+
+s = ttk.Style()
+s.configure('OptionsButton.TButton', wraplength=80,
+                justify='center', padding=5)
+s.configure('InfoLabel.TLabel', wraplength=500)
 
 # create the object instances that will store all the data
 mData = MazeData(defaultRows, defaultCols, defaultBounds,
@@ -1205,20 +1640,21 @@ colsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
 
 algDisplayFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
 algSupLabel = ttk.Label(algDisplayFrame, text='Algorithm:', width=30)
-algMainLabel = ttk.Label(algDisplayFrame, textvariable=stateData.currentAlgorithm,
-                        anchor='center', relief='ridge', borderwidth=10)  # TODO more decoration?
-configAlgButton = ttk.Button(algDisplayFrame,
-                                text='Configure\nAlgorithm\nOptions',
+algCombobox = ttk.Combobox(algDisplayFrame, textvariable=stateData.currentAlgorithm)
+# algMainLabel = ttk.Label(algDisplayFrame, textvariable=stateData.currentAlgorithm,
+#                         anchor='center', relief='ridge', borderwidth=10)  # TODO more decoration?
+configAlgButton = ttk.Button(algDisplayFrame, style='OptionsButton.TButton',
+                                text='Algorithm Info & Options',
                                 command=stateData.configAlgButtonPushed)
 animationSpeedLabel = ttk.Label(algDisplayFrame, text='Animation Speed:')
 animationSpeedSlider = ttk.Scale(algDisplayFrame, orient=HORIZONTAL, length=40,
                                 from_=30.0, to=1.0)
 # use animationSpeedSlider.get()
 # PUT STEP OR SPEED THING BELOW algMainLabel
-animationStepButton = ttk.Button(algDisplayFrame, text='Step Animation',
-                                    command=stateData.stepAnimation)   # grid only when in step mode
-configAnimButton = ttk.Button(algDisplayFrame,
-                                text='Configure\nAnimation\nOptions',
+animationStepButton = ttk.Button(algDisplayFrame, text='Step Animation') # grid only when in step mode;
+                                                                        # TODO set command callback
+configAnimButton = ttk.Button(algDisplayFrame, style='OptionsButton.TButton',
+                                text='Animation Options',
                                 command=stateData.configAnimButtonPushed)
 
 solgenFrame = ttk.Frame(mainframe)
@@ -1227,9 +1663,14 @@ solgenButton = ttk.Button(solgenFrame,
                             command=stateData.startAnimateMode,
                             default='active')
 pausePlayButton = ttk.Button(solgenFrame, image=pauseImage,
-                             command=stateData.pauseAnimation)    # TODO add command callback
+                             command=stateData.pauseAnimation)
+arrowButton = ttk.Button(solgenFrame, image=arrowImage)     # TODO set callback
 stopButton = ttk.Button(solgenFrame, image=stopImage,
-                        command=stateData.stopAnimateMode)         # TODO add command callback
+                        command=stateData.stopAnimateMode)
+
+infoFrame = ttk.Frame(mainframe)
+infoLabelText = StringVar(value='Welcome!')
+infoLabel = ttk.Label(infoFrame, textvariable=infoLabelText, font=largerFont)
 
 canvas = Canvas(mainframe, width=defaultCanvasWidth,
                 height=defaultCanvasHeight)
@@ -1271,18 +1712,23 @@ colsSpinbox.grid(row=2, column=1, sticky='new', padx=5, pady=(5,10))
 
 solgenFrame.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
 solgenButton.grid(sticky='nsew', columnspan=2)
-pausePlayButton.grid(row=0, column=0, sticky='nse', padx=(0,5))
-stopButton.grid(row=0, column=1, sticky='nsw')
+pausePlayButton.grid(row=0, column=1, sticky='nsw', padx=(5, 0))
+arrowButton.grid(row=0, column=1, sticky='nsw', padx=(5, 0))
+stopButton.grid(row=0, column=0, sticky='nse')
+arrowButton.grid_remove()
 pausePlayButton.grid_remove()
 stopButton.grid_remove()
 
 algDisplayFrame.grid(row=3, column=0, sticky='ews', padx=5, pady=5)
 algSupLabel.grid(row=0, column=0, sticky='nsw', padx=5, pady=5)
-algMainLabel.grid(row=1, column=0, sticky='nsew', padx=5, pady=(5,10))
+algCombobox.grid(row=1, column=0, sticky='nsew', padx=5, pady=(5,10))
 configAlgButton.grid(row=0, rowspan=2, column=1, sticky='nsew', padx=5, pady=5)
 animationSpeedLabel.grid(row=2, column=0, sticky='nsew', padx=5, pady=5)
 animationSpeedSlider.grid(row=3, column=0, sticky='nsew', padx=5, pady=5)
 configAnimButton.grid(row=2, rowspan=2, column=1, sticky='nsew', padx=5, pady=5)
+
+infoFrame.grid(row=4, column=0, columnspan=2, sticky='nsew', padx=5, pady=5)
+infoLabel.grid(sticky='ns', padx=5, pady=10)
 
 canvas.grid(row=1, column=1, rowspan=3, sticky='nsew', padx=5, pady=5)
 
@@ -1293,6 +1739,7 @@ mainframe.rowconfigure(0, weight=1)
 mainframe.rowconfigure(1, weight=50)
 mainframe.rowconfigure(2, weight=50)
 mainframe.rowconfigure(3, weight=50)
+mainframe.rowconfigure(4, weight=1)
 mainframe.columnconfigure(0, weight=1)
 mainframe.columnconfigure(1, weight=50)
 modeButtonsFrame.rowconfigure(0, weight=1)
@@ -1310,6 +1757,8 @@ algDisplayFrame.rowconfigure(0, weight=1)
 algDisplayFrame.rowconfigure(1, weight=1)
 algDisplayFrame.columnconfigure(0, weight=1)
 algDisplayFrame.columnconfigure(1, weight=1)
+infoFrame.rowconfigure(0, weight=1)
+infoFrame.columnconfigure(0, weight=1)
 
 
 
@@ -1333,29 +1782,31 @@ algDisplayFrame.columnconfigure(1, weight=1)
 
 
 
-
-# Put this next block into function to initialize everything
-
-
-
-# put algorithm StringVar into AnimationStateData object
 
 rowsSpinbox.state(['readonly'])
 colsSpinbox.state(['readonly'])
 rowsSpinbox.set(defaultRows)
 colsSpinbox.set(defaultCols)
 animationSpeedSlider.set(defaultSpeed)
-
 # then draw the data onto the canvas
 # initially draw the canvas and maze
 canvas.create_rectangle(0, 0, defaultCanvasWidth,
                         defaultCanvasHeight, fill='white')
 mData.drawMaze()
+stateData.setSolveMode()
+SimpleSearchAnimationData.initDfsBfsFuncs()
+
 # add event binding to handle canvas resizing
 canvas.bind('<Configure>', lambda e: cData.resizeCanvas())
 canvas.bind('<Motion>', cData.mouseHovering)
 canvas.bind('<B1-Motion>', cData.mouseDragging)
 canvas.bind('<ButtonPress-1>', cData.mouseClicked)
+
+root.bind('<<ComboboxSelected>>', stateData.algorithmChanged)
+root.bind('<Control-w>', lambda e: root.destroy())
+
+root.update_idletasks()
+root.geometry('1000x600+200+200')
 
 root.mainloop()
 print('done')

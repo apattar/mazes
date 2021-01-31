@@ -1,3 +1,61 @@
+ability to draw lines in generate mode
+
+
+
+
+
+
+Once done, make buttons different colors to make ui more interesting
+and easier to read - make backgrounds of each frame different colors
+- take a hot minute to read about styles
+- (how to center justify text in buttons?)
+- buttons - add config option cursor='hand2'
+- when animation is running, make backgrounds for fully disabled frames
+the default color, but keep frames that still have available controls
+keep their new color
+- I think that red button was supposed to be a record button. Also,
+I'm not actually digging the black borders around the images
+- assign a color to each of solve and generate modes, and have the
+buttons be those colors, and in each mode have the entire window
+change to be like that color - like for green, have the background be
+a darker green while the sunken frames are a lighter green, or something
+like that
+
+
+Maybe have a tutorial to introduce the features; this is probably
+what anybody looking at this to evaluate me would see first
+
+
+
+
+
+
+
+
+
+bind enter key to starting the animation
+
+really should make a* animation cleaner & more similar
+to other animations (like with black dots and such); will make huge difference
+in how professional it looks - blue instead of red, red instead of green
+- just have first circle be the same color as the line below it
+
+Have the colors used to draw traversalLog lines change in a gradient
+based on how recently it was found, so the deeper you search
+the more of a certain color you get!
+
+
+
+fully remove redrawDelay if it ends up staying just at 1 to make code cleaner
+
+
+Once finished everything, try changing cell indexing scheme to (row, col) and
+see if it improves performance
+
+
+
+
+
 Would there be a way to have the margins of the maze change
 if the aspect ratio of each cell does not fall within some
 set boundary? Or have them always be squares?
@@ -10,7 +68,14 @@ the greatest; then determine the dimensions of the cell based on that,
 and put other margins based on that
 
 
-boundary updating when rows and cols are updated by user
+boundary updating when rows and cols are updated by user - would be
+a lot easier if boundaries were stored like (row, col)
+
+
+have another animation speed slider in the animation settings,
+but this one shows the time in seconds of the delay
+between steps (put under the description for default mode,
+have it disable when another value is chosen for the mode)
 
 
 when clicking and dragging to make boundaries in solve mode,
@@ -47,44 +112,5 @@ they have to be converted back and forth each time a new boundary is added
 or drawn onto the canvas
 
 
-
-
-
-
-
-maybe have a new ui label that has instructions when animation not running,
-says 'solving...' or 'generating...' when animation is running,
-says 'no solution found' or 'solution found!' once animation finishes,
-and might say other things
-
-
-bind enter key to starting the animation
-
-
-Have the colors used to draw traversalLog lines change in a gradient
-based on how recently it was found, so the deeper you search
-the more of a certain color you get!
-
-
-
-Once done, make buttons different colors to make ui more interesting
-and easier to read - make backgrounds of each frame different colors
-- take a hot minute to read about styles
-- (how to center justify text in buttons?)
-- buttons - add config option cursor='hand2'
-- when animation is running, make backgrounds for fully disabled frames
-the default color, but keep frames that still have available controls
-keep their new color
-- I think that red button was supposed to be a record button. Also,
-I'm not actually digging the black borders around the images
-
-
-Once finished everything, try changing cell indexing scheme to (row, col) and
-see if it improves performance
-
-
-fully remove redrawDelay if it ends up staying just at 1 to make code cleaner
-
-
-Maybe have a tutorial to introduce the features; this is probably
-what anybody looking at this to evaluate me would see first
+have the colors of the maze be customizable
+have a way to save an image of the maze to the filesystem
