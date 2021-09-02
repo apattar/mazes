@@ -1,4 +1,47 @@
-ability to draw lines in generate mode
+
+So here's the idea: switch the list to a tuple of ("Above", searchAboveFn).
+You'll need to change every place where the second function is accessed and called.
+Then, use a list comprehension to take care of setting the local "dirs" - keep in mind that it will now be backwards
+Then, whenever two values are switched in the settings, identify and switch those values in the list.
+
+
+
+Your roadmap:
+
+
+
+
+
+- settings for the different algorithms that you were planning to add
+- deal with line wrap and geometry in the settings windows
+- let's be honest - if you can give it a cross-platform look, that would really be a plus
+- give it a readme and clean up print statements and debugging code - the readme should have a tutorial of sorts explaining the basic features. Make txt files untracked and see if that removes them from your history.
+
+
+- ability to draw lines in generate mode
+
+So here's the design:
+
+When you first enter generate mode, nothing will be on the maze.
+When you hover over the start square, a transparentish circle will show up, like the normal maze nodes.
+The moment you click on it, that puts you in "drawing a line mode". 
+The help text will change to "Click and drag to draw a line. Try solving the maze!"
+In this mode, you can hover over the end of the line you just drew 
+
+You know, this is kind of a useless feature. It doesn't really add anything. Let's table it for now.
+At the end you can decide if it's really necessary. If so, these guidelines are usable. If not, you'll need to go through your code and remove all preliminary support for it, like those if statements.
+
+and then it will be ready to be made a public repo.
+
+
+
+Here were the problems you came across that slowed down the development process and hurt your overall perception of development:
+- You didn't accept that there was inherent circular dependency in your structure, and that essentially it isn't really worth fixing. Code is messy by default, especially with a UI application like this, since one click may need features from all over your codebase. You can't be a neat freak; don't worry so much about that.
+- You know I think partially, this is such an entertaining project that you're getting easily distracted by playing around with the animation. You can't let that happen.
+- you're also lacking the ability to set goals. You're reaching a point where you're tired, then just giving up instead of thinking critically about what you've done and whether or not you have a good game plan for what you need to do.
+- whenever you're unsure about what to do, sit back and think for at least a minute before giving up. You'll come up with a simple and fun plan.
+
+
 
 
 

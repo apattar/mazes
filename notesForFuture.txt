@@ -22,3 +22,9 @@ file will not need to be imported by anything) and created
 scope issues - this is why you ended up needing to pass stuff
 around a lot, which was unnecessary, made things laggier than
 they needed to be, and made things harder for you
+
+
+
+
+You should create a virtual environment. This was worked on for the 
+second time with Python 3.9.6, and for the first time with an earlier version.

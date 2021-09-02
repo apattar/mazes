@@ -26,8 +26,7 @@ class ecAnimationData(object):
         self.done = False
     
     def __repr__(self):
-        return f'unchecked: {self.unchecked}\nunion find: {self.unionFind}\n\
-bounds: {mData.boundaries}'
+        return f'unchecked: {self.unchecked}\nunion find: {self.unionFind}\nbounds: {mData.boundaries}'
         # TODO remove
 
 
@@ -100,11 +99,10 @@ class SimpleSearchAnimationData(object):
                 MazeData.ad.seen.add(right)
                 MazeData.ad.worklistWithParents.append((right, curr))
 
-        SimpleSearchAnimationData.dfsNeighborFuncs = [checkUpper,
-                                checkLeft, checkRight, checkLower]
-
-        SimpleSearchAnimationData.bfsNeighborFuncs = [checkLower,
-                                checkRight, checkLeft, checkUpper]
+        SimpleSearchAnimationData.dfsNeighborFuncs = [("Above", checkUpper),
+                ("Left", checkLeft), ("Right", checkRight), ("Below", checkLower)]
+        SimpleSearchAnimationData.bfsNeighborFuncs = [("Below", checkLower),
+                ("Right", checkRight), ("Left", checkLeft), ("Above", checkUpper)]
 
 class asVtx(object):
     def __init__(self, g, h, f, loc, parent):
@@ -212,7 +210,7 @@ class ApplicationStateData(object):
         self.currentAlgorithm = StringVar(value='A*')
         self.mode = 'sol'
         self.animationRunning = BooleanVar(value=False)
-        self.animMode = StringVar(value='step')     # TODO set to default
+        self.animMode = StringVar(value='default')
         # don't need to store some of these things twice - can just access them directly from the widget
     
     def setSolveMode(self):
@@ -386,17 +384,50 @@ Beginning at the start node, neighboring nodes are continually examined until th
 
 The nature of DFS is such that the order in which the neighbors of nodes are examined plays a large part in how long the algorithm takes to find a path. You can change the order that neighbors of nodes are examined below:""")
 
-            l = ttk.Label(settingsFrame, text='placeholder').grid(sticky='nsew', padx=5, pady=5)
-            # TODO ideas for interface based on widgets that I have access to
-            # - have buttons to select and move around text
-            # - have four comboboxes, but when they're changed the other
-            #   corresponding combobox changes so there's just one order
-            # - you could use event listeners and a canvas to make a cool
-            #   drag and drop interface 
+            # create settings UI
+            ttk.Label(settingsFrame, text="Checked first:").grid(row=0, column=0, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked second:").grid(row=0, column=1, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked third:").grid(row=0, column=2, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked fourth:").grid(row=0, column=3, sticky="sew", padx=5, pady=5)
 
-            # if you end up with time, do the drag and drop thing
-            # try it as fast as possible
-            # if not, do the combobox thing
+            dirs = [SimpleSearchAnimationData.dfsNeighborFuncs[i][0] for i in range(3, -1, -1)]
+            cbs = []
+            for i in range(4):
+                newCb = ttk.Combobox(settingsFrame, textvariable=StringVar())
+                newCb["values"] = tuple(dirs)
+                newCb.set(dirs[i])
+                newCb.state(["readonly"])
+                newCb.grid(row=1, column=i, sticky="new", padx=5, pady=5)
+                cbs.append(newCb)
+
+            def createCBCallback(cb):
+                def callback(_):
+                    # find other combobox whose value has been switched to;
+                    # set it to the value that was switched from
+                    thisval = cb.get()
+                    remaining = set(dirs)
+                    for ocb in cbs:
+                        otherval = ocb.get()
+                        if otherval in remaining: remaining.remove(otherval)
+                        if thisval == otherval and not cb is ocb:
+                            theocb = ocb
+                    if len(remaining) == 0: return  # there was no change made by selection
+                    switchFrom = thisval
+                    switchTo = remaining.pop()
+                    theocb.set(switchTo)
+
+                    # update SimpleSearchAnimationData.dfsNeighborFuncs with switch
+                    for (i,el) in enumerate(SimpleSearchAnimationData.dfsNeighborFuncs):
+                        if el[0] == switchFrom: s1 = i
+                        elif el[0] == switchTo: s2 = i
+                    lower, higher = (s1, s2) if s1 < s2 else (s2, s1)
+                    popped = SimpleSearchAnimationData.dfsNeighborFuncs.pop(higher)
+                    SimpleSearchAnimationData.dfsNeighborFuncs.insert(lower, popped)
+                    popped = SimpleSearchAnimationData.dfsNeighborFuncs.pop(lower + 1)
+                    SimpleSearchAnimationData.dfsNeighborFuncs.insert(higher, popped)
+                return callback
+
+            for cb in cbs: cb.bind("<<ComboboxSelected>>", createCBCallback(cb))
 
         elif alg == 'BFS':
             infoIntroLabel.config(text="""\
@@ -406,7 +437,50 @@ Beginning at the start node, neighboring nodes are continually examined until th
 
 In BFS, since all neighbors are examined at once, the order in which the neighbors of nodes are examined doesn't play a very large role in the algorithm's speed; however, it does have an effect. You can change the order that neighbors of nodes are examined below:""")
         
-        # add extra settings here for bfs
+            # create settings UI
+            ttk.Label(settingsFrame, text="Checked first:").grid(row=0, column=0, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked second:").grid(row=0, column=1, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked third:").grid(row=0, column=2, sticky="sew", padx=5, pady=5)
+            ttk.Label(settingsFrame, text="Checked fourth:").grid(row=0, column=3, sticky="sew", padx=5, pady=5)
+
+            dirs = [el[0] for el in SimpleSearchAnimationData.bfsNeighborFuncs]
+            cbs = []
+            for i in range(4):
+                newCb = ttk.Combobox(settingsFrame, textvariable=StringVar())
+                newCb["values"] = tuple(dirs)
+                newCb.set(dirs[i])
+                newCb.state(["readonly"])
+                newCb.grid(row=1, column=i, sticky="new", padx=5, pady=5)
+                cbs.append(newCb)
+
+            def createCBCallback(cb):
+                def callback(_):
+                    # find other combobox whose value has been switched to;
+                    # set it to the value that was switched from
+                    thisval = cb.get()
+                    remaining = set(dirs)
+                    for ocb in cbs:
+                        otherval = ocb.get()
+                        if otherval in remaining: remaining.remove(otherval)
+                        if thisval == otherval and not cb is ocb:
+                            theocb = ocb
+                    if len(remaining) == 0: return  # there was no change made by selection
+                    switchFrom = thisval
+                    switchTo = remaining.pop()
+                    theocb.set(switchTo)
+
+                    # update SimpleSearchAnimationData.bfsNeighborFuncs with switch
+                    for (i,el) in enumerate(SimpleSearchAnimationData.bfsNeighborFuncs):
+                        if el[0] == switchFrom: s1 = i
+                        elif el[0] == switchTo: s2 = i
+                    lower, higher = (s1, s2) if s1 < s2 else (s2, s1)
+                    popped = SimpleSearchAnimationData.bfsNeighborFuncs.pop(higher)
+                    SimpleSearchAnimationData.bfsNeighborFuncs.insert(lower, popped)
+                    popped = SimpleSearchAnimationData.bfsNeighborFuncs.pop(lower + 1)
+                    SimpleSearchAnimationData.bfsNeighborFuncs.insert(higher, popped)
+                return callback
+
+            for cb in cbs: cb.bind("<<ComboboxSelected>>", createCBCallback(cb))
         
         elif alg == 'A*':
             infoIntroLabel.config(text="""\
@@ -438,20 +512,19 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
         localAlgCombobox = ttk.Combobox(currAlgFrame, textvariable=tempAlg)
         localAlgCombobox['values'] = stateData.solveAlgorithms \
             if stateData.mode == 'sol' else stateData.genAlgorithms
+        localAlgCombobox.state(["readonly"])
         infoLabelFrame = ttk.Labelframe(algRoot, text='Info')
         infoIntroLabel = ttk.Label(infoLabelFrame, font=largerFont,
                                     style='InfoLabel.TLabel')
         infoLabel = ttk.Label(infoLabelFrame, style='InfoLabel.TLabel')
         settingsFrame = ttk.Frame(algRoot, relief='sunken')
-        cancelButton = ttk.Button(algRoot, text='Cancel', command=lambda:
-            self.closeAuxWindow(algRoot))
-        applyButton = ttk.Button(algRoot, text='Apply', command=lambda:
+        okayButton = ttk.Button(algRoot, text='Okay', command=lambda:
             self.applyAlgSettings(algRoot, tempAlg.get()))
 
         self.resetAlgSettingsInterfaceLayout(localAlgCombobox, infoIntroLabel,
             infoLabel, tempAlg.get(), settingsFrame)
 
-        algRoot.bind('<<ComboboxSelected>>', lambda e:
+        localAlgCombobox.bind('<<ComboboxSelected>>', lambda _:
             self.resetAlgSettingsInterfaceLayout(localAlgCombobox,
                                 infoIntroLabel, infoLabel, tempAlg.get(),
                                 settingsFrame))
@@ -463,8 +536,7 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
         infoIntroLabel.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
         infoLabel.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
         settingsFrame.grid(row=2, column=0, columnspan=3, sticky='nsew', padx=5, pady=5)
-        cancelButton.grid(row=3, column=1, sticky='se', padx=5, pady=10)
-        applyButton.grid(row=3, column=2, sticky='sw', padx=5, pady=10)
+        okayButton.grid(row=3, column=2, sticky='sw', padx=5, pady=10)
 
         algRoot.rowconfigure(0, weight=1)
         algRoot.rowconfigure(1, weight=100)
@@ -577,7 +649,6 @@ In this mode, the steps of the algorithm are not shown; the animation immediatel
         else:
             rootGeom = rootGeom[a:] if a < b else rootGeom[b:]
         animRoot.geometry('600x650' + rootGeom)
-
 
 class MazeData(object):
     ad = None
@@ -806,7 +877,7 @@ class MazeData(object):
         initialSeenLen = len(MazeData.ad.seen)
 
         # check neighbors in set order; if unmarked, push to worklist
-        for func in SimpleSearchAnimationData.dfsNeighborFuncs:
+        for (_, func) in SimpleSearchAnimationData.dfsNeighborFuncs:
             func(curr)
 
         if len(MazeData.ad.seen) == initialSeenLen:
@@ -860,7 +931,7 @@ class MazeData(object):
 
         initialSeenLen = len(MazeData.ad.seen)
 
-        for func in SimpleSearchAnimationData.bfsNeighborFuncs:
+        for (_, func) in SimpleSearchAnimationData.bfsNeighborFuncs:
             func(curr)
 
         if len(MazeData.ad.seen) == initialSeenLen:
@@ -1367,8 +1438,6 @@ class MazeData(object):
         # updates MazeData object, clearing boundaries/solve line,
         # depending on what mode it's in
 
-
-
 class CanvasData(object):
     def __init__(self, resizeRedrawDelay, startWidth, startHeight):
         self.resizeRedrawDelay = resizeRedrawDelay  # prevent resize redraw lagging
@@ -1558,24 +1627,6 @@ class CanvasData(object):
             # in generate mode
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 print('starting...')
 root = Tk()
 root.title('Mazes')
@@ -1614,9 +1665,6 @@ mData = MazeData(defaultRows, defaultCols, defaultBounds,
 stateData = ApplicationStateData()
 cData = CanvasData(redrawDelay, defaultCanvasWidth, defaultCanvasHeight)
 
-# initialize algorithm options, and set value of algorithm StringVar
-# initialize animation options, and set display accordingly
-
 
 # create widgets
 mainframe = ttk.Frame(root, relief='ridge', borderwidth=10)
@@ -1636,23 +1684,19 @@ rowsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
 colsLabel = ttk.Label(genControlsFrame, text='Columns: ')
 colsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
                         command=lambda: mData.updateCols())    # TODO disable when there's user-inputted stuff on the maze, or an animation running
-# use rowsSpinbox.get() to get the value in the spinbox
+# use rowsSpinbox.get()
 
 algDisplayFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
 algSupLabel = ttk.Label(algDisplayFrame, text='Algorithm:', width=30)
 algCombobox = ttk.Combobox(algDisplayFrame, textvariable=stateData.currentAlgorithm)
-# algMainLabel = ttk.Label(algDisplayFrame, textvariable=stateData.currentAlgorithm,
-#                         anchor='center', relief='ridge', borderwidth=10)  # TODO more decoration?
 configAlgButton = ttk.Button(algDisplayFrame, style='OptionsButton.TButton',
                                 text='Algorithm Info & Options',
                                 command=stateData.configAlgButtonPushed)
 animationSpeedLabel = ttk.Label(algDisplayFrame, text='Animation Speed:')
 animationSpeedSlider = ttk.Scale(algDisplayFrame, orient=HORIZONTAL, length=40,
-                                from_=30.0, to=1.0)
-# use animationSpeedSlider.get()
-# PUT STEP OR SPEED THING BELOW algMainLabel
+                                from_=30.0, to=1.0)         # use animationSpeedSlider.get()
 animationStepButton = ttk.Button(algDisplayFrame, text='Step Animation') # grid only when in step mode;
-                                                                        # TODO set command callback
+
 configAnimButton = ttk.Button(algDisplayFrame, style='OptionsButton.TButton',
                                 text='Animation Options',
                                 command=stateData.configAnimButtonPushed)
@@ -1809,7 +1853,7 @@ root.update_idletasks()
 root.geometry('1000x600+200+200')
 
 root.mainloop()
-print('done')
+print('application closed')
 
 
 # to do:
@@ -1821,3 +1865,4 @@ print('done')
 # data when animate mode is on
 # - can phase out mData.animateModeOn, since we know the mode is on
 # when animData is not None
+
