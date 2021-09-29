@@ -1,21 +1,12 @@
 
-So here's the idea: switch the list to a tuple of ("Above", searchAboveFn).
-You'll need to change every place where the second function is accessed and called.
-Then, use a list comprehension to take care of setting the local "dirs" - keep in mind that it will now be backwards
-Then, whenever two values are switched in the settings, identify and switch those values in the list.
-
-
-
 Your roadmap:
 
-
-
-
-
-- settings for the different algorithms that you were planning to add
-- deal with line wrap and geometry in the settings windows
-- let's be honest - if you can give it a cross-platform look, that would really be a plus
-- give it a readme and clean up print statements and debugging code - the readme should have a tutorial of sorts explaining the basic features. Make txt files untracked and see if that removes them from your history.
++ settings for the different algorithms that you were planning to add
+- descriptions for edge-centric, and I guess get rid of vertex centric
++ let's be honest - if you can give it a cross-platform look, that would really be a plus
+    - finish up with choosing colors for hovering and clicking
+- give it a readme and clean up print statements and debugging code - the readme should have a tutorial of sorts explaining the basic features.
+- Make txt files untracked and see if that removes them from your history.
 
 
 - ability to draw lines in generate mode

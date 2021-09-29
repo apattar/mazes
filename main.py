@@ -214,23 +214,26 @@ class ApplicationStateData(object):
         # don't need to store some of these things twice - can just access them directly from the widget
     
     def setSolveMode(self):
+        # updates state to solve mode
+        # also deals with mode button appearance
         self.currentAlgorithm.set(
             stateData.solveAlgorithms[stateData.currSolAlg])
         algCombobox['values'] = stateData.solveAlgorithms
         self.solgenButtonText.set('Solve')
         self.mode = 'sol'
-        # extend!!!
-        # updates state to solve mode
-        # also deals with mode button appearance
+        makeButStyleBlue("Solve.TButton")
+        makeButStyleDefault("Generate.TButton")
     
     def setGenerateMode(self):
+        # updates state to generate mode
+        # also deals with mode button appearance
         self.currentAlgorithm.set(
             stateData.genAlgorithms[stateData.currGenAlg])
         algCombobox['values'] = stateData.genAlgorithms
         self.solgenButtonText.set('Generate')
         self.mode = 'gen'
-        # updates state to generate mode
-        # also deals with mode button appearance
+        makeButStyleBlue("Generate.TButton")
+        makeButStyleDefault("Solve.TButton")
 
     def algorithmChanged(self, e):
         algCombobox.selection_clear()
@@ -429,6 +432,13 @@ The nature of DFS is such that the order in which the neighbors of nodes are exa
 
             for cb in cbs: cb.bind("<<ComboboxSelected>>", createCBCallback(cb))
 
+            settingsFrame.rowconfigure(0, weight=1)
+            settingsFrame.rowconfigure(1, weight=1)
+            settingsFrame.columnconfigure(0, weight=1)
+            settingsFrame.columnconfigure(1, weight=1)
+            settingsFrame.columnconfigure(2, weight=1)
+            settingsFrame.columnconfigure(3, weight=1)
+
         elif alg == 'BFS':
             infoIntroLabel.config(text="""\
 Breadth-first search, or BFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
@@ -488,7 +498,7 @@ A* (pronounced 'ay-star') is a graph pathfinding algorithm that is always guaran
             infoLabel.config(text="""\
 Like in DFS and BFS, neighboring nodes are examined beginning with the start node until the end node is reached. As each node is examined, however, data that describes the path taken to get there from the start node is retained. Using this data, each node's 'f-cost' is calculated, which is the sum of the distance traveled to get there (the node's 'g-cost') and the distance from there to the end node (the node's 'h-cost'). The node with the lowest f-cost is always examined next, which always results in the shortest possible path from start to finish. Consult a search engine for a simpler or more in-depth explanation.
 
-A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS, since lots of extra data must be stored for each node (its parent node, g-cost, h-cost, and f-cost). Despite this, a shortest possible path will always be found (there may be multiple). You can choose to display additional data about each node as the algorithm runs below:""")
+A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS, since lots of extra data must be stored for each node (its parent node, g-cost, h-cost, and f-cost). Despite this, a shortest possible path will always be found (there may be multiple). There are no options associated with this algorithm.""")
 
             # add extra settings here for A*
 
@@ -514,9 +524,9 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
             if stateData.mode == 'sol' else stateData.genAlgorithms
         localAlgCombobox.state(["readonly"])
         infoLabelFrame = ttk.Labelframe(algRoot, text='Info')
-        infoIntroLabel = ttk.Label(infoLabelFrame, font=largerFont,
+        infoIntroLabel = ttk.Label(infoLabelFrame, font=hugeFont,
                                     style='InfoLabel.TLabel')
-        infoLabel = ttk.Label(infoLabelFrame, style='InfoLabel.TLabel')
+        infoLabel = ttk.Label(infoLabelFrame, font=largerFont, style='InfoLabel.TLabel')
         settingsFrame = ttk.Frame(algRoot, relief='sunken')
         okayButton = ttk.Button(algRoot, text='Okay', command=lambda:
             self.applyAlgSettings(algRoot, tempAlg.get()))
@@ -549,20 +559,8 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
         infoLabelFrame.rowconfigure(1, weight=50)
         infoLabelFrame.columnconfigure(0, weight=1)
 
-        # position in same location as root TODO center - simple!
-        algRoot.update_idletasks()
-        algGeom = algRoot.geometry()
-        algGeom = algGeom[:algGeom.find('+')]
-        rootGeom = root.geometry()
-        a = rootGeom.find('+')
-        b = rootGeom.find('-')
-        if b == -1:
-            rootGeom = rootGeom[a:]
-        elif a == -1:
-            rootGeom = rootGeom[b:]
-        else:
-            rootGeom = rootGeom[a:] if a < b else rootGeom[b:]
-        algRoot.geometry(algGeom + rootGeom)
+        # position in same location as root
+        algRoot.geometry(root.geometry())
     
     def configAnimButtonPushed(self):
         print('opening configAlg window')
@@ -687,13 +685,13 @@ class MazeData(object):
                                 cData.margin + (sr*cData.cell_h),
                                 cData.margin + ((1+sc)*cData.cell_w),
                                 cData.margin + ((1+sr)*cData.cell_h),
-                                fill='#85f781',
+                                fill=lightGreenColor,
                                 width=0)
         canvas.create_rectangle(cData.margin + (ec*cData.cell_w),
                                 cData.margin + (er*cData.cell_h),
                                 cData.margin + ((1+ec)*cData.cell_w),
                                 cData.margin + ((1+er)*cData.cell_h),
-                                fill='#81f7eb',
+                                fill=lightBlueColor,
                                 width=0)
         if sr == 0:
             canvas.create_text(cData.margin + ((sc + 0.5)*cData.cell_w),
@@ -725,14 +723,14 @@ class MazeData(object):
                                anchor='center',
                                text='END',
                                font=('Courier %d bold' % (cData.cell_w // 4)),
-                               fill='#5cb5ac')
+                               fill='#84afc4')
         elif er == self.rows - 1:
             canvas.create_text(cData.margin + ((ec + 0.5)*cData.cell_w),
                                cData.h - (2 * cData.margin // 3),
                                anchor='center',
                                text='END',
                                font=('Courier %d bold' % (cData.cell_w // 4)),
-                               fill='#5cb5ac')
+                               fill='#84afc4')
         else:
             word = 'END'
             for i in range(3):
@@ -741,7 +739,7 @@ class MazeData(object):
                                    anchor='center',
                                    text=word[i],
                                    font='Courier %d bold' % (cData.cell_h // 4),
-                                   fill='#5cb5ac')
+                                   fill='#84afc4')
 
     def drawBoundaries(self):
         canvas.create_line(cData.margin, cData.margin,
@@ -1428,15 +1426,8 @@ class MazeData(object):
         # MAKE IT SO THEY JUST CAN'T BE PUT ON THE SAME SQUARE (text would overlap)
         
     def clearMaze(self):
-        if (stateData.mode == 'sol'):
-            self.boundaries = set()
-        else:
-            pass
-            # TODO add support for clearing solve line in generate mode
-        self.drawMaze()  
-        # to be called when Clear Maze button is pressed
-        # updates MazeData object, clearing boundaries/solve line,
-        # depending on what mode it's in
+        self.boundaries = set()
+        self.drawMaze()
 
 class CanvasData(object):
     def __init__(self, resizeRedrawDelay, startWidth, startHeight):
@@ -1640,6 +1631,8 @@ defaultBounds = set([7, -22, -20, 14, 15, 16, -15,
                     -16, -13, -11, -9, -7, -6, -1])
 redrawDelay = 1
 
+
+# handle styling
 pauseImage = PhotoImage(file='images/pause.png')
 playImage = PhotoImage(file='images/start.png')
 stopImage = PhotoImage(file='images/stop.png')
@@ -1652,12 +1645,38 @@ arrowImage = arrowImage.subsample(10, 10)
 defFont = font.nametofont('TkDefaultFont')
 defFont['size'] += 2
 largerFont = font.Font(family=defFont['family'],
-                        name='largerFont', size=(defFont['size']+5))
+                        name='largerFont', size=(defFont['size']+0))
+hugeFont = font.Font(family=defFont['family'],
+                     name='hugeFont', size=(defFont['size']+5))
 
 s = ttk.Style()
+s.theme_use('clam')
 s.configure('OptionsButton.TButton', wraplength=80,
                 justify='center', padding=5)
-s.configure('InfoLabel.TLabel', wraplength=500)
+s.configure('InfoLabel.TLabel', wraplength=1065)
+
+butDefaultColor = "#c7c5c1"
+butDefaultPress = rgbString(186, 181, 171)
+butDefaultHover = rgbString(238, 235, 231)
+lightGreenColor = "#a7d4a5"
+lightGreenHover = "#bedebd"
+lightGreenPress = "#85a883"
+lightBlueColor = "#b0c8d4"
+lightBlueHover = "#cae1ed"
+lightBluePress = "#90a5b0"
+def makeButStyleDefault(butStyle):
+    s.configure(butStyle, background=butDefaultColor)
+    s.map(butStyle, background=[("pressed", butDefaultPress), ("active", butDefaultHover)])
+def makeButStyleBlue(butStyle):
+    s.configure(butStyle, background=lightBlueColor)
+    s.map(butStyle, background=[("pressed", lightBluePress), ("active", lightBlueHover)])
+def makeButStyleGreen(butStyle):
+    s.configure(butStyle, background=lightGreenColor)
+    s.map(butStyle, background=[("pressed", lightGreenPress), ("active", lightGreenHover)])
+
+s.configure("TButton", background=butDefaultColor)
+makeButStyleBlue("Solve.TButton")
+makeButStyleGreen("Main.TButton")
 
 # create the object instances that will store all the data
 mData = MazeData(defaultRows, defaultCols, defaultBounds,
@@ -1672,8 +1691,10 @@ mainframe = ttk.Frame(root, relief='ridge', borderwidth=10)
 modeButtonsFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
 solveModeButton = ttk.Button(modeButtonsFrame, text='Solve Mode', width=30,
                             command=stateData.setSolveMode)
+solveModeButton["style"] = "Solve.TButton"
 genModeButton = ttk.Button(modeButtonsFrame, text='Generate Mode', width=30,
                         command=stateData.setGenerateMode)
+genModeButton["style"] = "Generate.TButton"
 
 genControlsFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
 clearButton = ttk.Button(genControlsFrame, text='Clear Maze',
@@ -1705,7 +1726,7 @@ solgenFrame = ttk.Frame(mainframe)
 solgenButton = ttk.Button(solgenFrame, 
                             textvariable=stateData.solgenButtonText,
                             command=stateData.startAnimateMode,
-                            default='active')
+                            default='active', style="Main.TButton")
 pausePlayButton = ttk.Button(solgenFrame, image=pauseImage,
                              command=stateData.pauseAnimation)
 arrowButton = ttk.Button(solgenFrame, image=arrowImage)     # TODO set callback
@@ -1850,7 +1871,7 @@ root.bind('<<ComboboxSelected>>', stateData.algorithmChanged)
 root.bind('<Control-w>', lambda e: root.destroy())
 
 root.update_idletasks()
-root.geometry('1000x600+200+200')
+root.geometry('1100x600+200+200')
 
 root.mainloop()
 print('application closed')
