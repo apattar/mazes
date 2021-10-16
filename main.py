@@ -9,11 +9,12 @@ def rgbString(red, green, blue):
 
 class vcAnimationData(object):
     def __init__(self):
+        # choose random starting cell
         start = choice(range(mData.rows*mData.cols))
 
+        # initialize bag and tree
         self.bag = set()
         self.tree = set([(start, start)])
-
         upper = start - mData.cols
         lower = start + mData.cols
         left = start - 1
@@ -23,6 +24,7 @@ class vcAnimationData(object):
         if start % mData.cols != 0: self.bag.add((start, left))
         if right % mData.cols != 0: self.bag.add((start, right))
 
+        # add all boundaries to mData.boundaries
         boundstemp = list(range(-1, -mData.cols, -1))
         for i in range(mData.cols, mData.rows*mData.cols, mData.cols):
             boundstemp.append(i)
@@ -30,14 +32,15 @@ class vcAnimationData(object):
                 boundstemp.append(j)
                 boundstemp.append(-j)
         mData.boundaries = set(boundstemp.copy())
+
         self.done = False
-    
-    def __repr__(self):
-        return "bag: " +  str(self.bag) +  "\ntree: " +  str(self.tree) +  "\n"
 
 class ecAnimationData(object):
     def __init__(self):
+        # initialize union find data structure
         self.unionFind = [-1] * (mData.rows*mData.cols)
+
+        # initialize list of edges
         self.unchecked = list(range(-1, -mData.cols, -1))
         for i in range(mData.cols, mData.rows*mData.cols, mData.cols):
             self.unchecked.append(i)
@@ -46,8 +49,8 @@ class ecAnimationData(object):
                 self.unchecked.append(-j)
         mData.boundaries = set(self.unchecked.copy())
         shuffle(self.unchecked)
-        self.done = False
 
+        self.done = False
 
 class SimpleSearchAnimationData(object):
     dfsNeighborFuncs = []   # stored in order of execution
@@ -169,12 +172,8 @@ class ClosedList(object):
                 self.list.insert(i, vtx)
                 return
         
-        # list is empty
-        # or entire list was traversed through
+        # list is empty or entire list was traversed through
         self.list.append(vtx)
-    
-    def __repr__(self):
-        return str(self.list)   # TODO remove once unnecessary
 
 class OpenQueue(ClosedList):
     def __init__(self, startVtx):
@@ -182,7 +181,6 @@ class OpenQueue(ClosedList):
                                 # lowest to highest f-cost
     
     def pop(self):
-        print(f'Popping {self.list[0]} from OpenQueue\n')
         result = self.list.pop(0)
         return result
     
@@ -191,7 +189,6 @@ class OpenQueue(ClosedList):
         for vtx in self.list:
             if vtx.loc == loc:
                 return vtx.f
-        return 'error in getFofVtxWithLoc'     # TODO remove
 
 class asAnimationData(object):
     def __init__(self, start):
@@ -215,14 +212,13 @@ class asAnimationData(object):
                     del unused[curr]
                 unused[self.closedList.list[i].loc] = \
                     self.closedList.list[i].parent
-        
-        print('Solution: ' + str(self.solution))
+
 
 class ApplicationStateData(object):
     currSolAlg = 0  # holds index of current sol algorithm
     currGenAlg = 0  # holds index of current gen algorithm
-    solveAlgorithms = ('DFS', 'BFS', 'A*')   # dijkstra?
-    genAlgorithms = ('Edge-centric', 'Vertex-centric')    # possibly more?
+    solveAlgorithms = ('DFS', 'BFS', 'A*')
+    genAlgorithms = ('Edge-centric', 'Vertex-centric')
 
     def __init__(self):
         self.solgenButtonText = StringVar(value='Solve')
@@ -230,7 +226,6 @@ class ApplicationStateData(object):
         self.mode = 'sol'
         self.animationRunning = BooleanVar(value=False)
         self.animMode = StringVar(value='default')
-        # don't need to store some of these things twice - can just access them directly from the widget
     
     def setSolveMode(self):
         # updates state to solve mode
@@ -278,7 +273,6 @@ class ApplicationStateData(object):
             arrowButton.grid()
             stopButton.grid(sticky='nse', columnspan=1)
         else:
-            print('running')
             stopButton.grid(sticky='', columnspan=2)
 
         # disable widgets
@@ -295,9 +289,6 @@ class ApplicationStateData(object):
             infoLabelText.set('Solving...')
         else:
             infoLabelText.set('Generating...')
-
-        print('startAnimateMode called')
-        print('starting the animation...')
 
         mData.animate()
 
@@ -344,13 +335,9 @@ class ApplicationStateData(object):
         canvas.delete(*canvas.find_withtag('b'))
         mData.drawMaze()
 
-        print('stopAnimateMode called')
-
     def closeAuxWindow(self, window):
-        print(f'closing {window}')
         root.deiconify()
 
-        # position root in same location as window TODO center - simple!
         root.update_idletasks()
         rootGeom = root.geometry()
         a = rootGeom.find('+')
@@ -397,12 +384,8 @@ class ApplicationStateData(object):
 
         # make changes to widgets
         if alg == 'DFS':
-            infoIntroLabel.config(text="""\
-Depth-first search, or DFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
-            infoLabel.config(text="""\
-Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A stack is used to keep track of which nodes to visit next, which means that a path that stems from one neighbor of a node is followed as far as possible before a different neighbor is examined. Consult a search engine for a simpler or more in-depth explanation.
-
-The nature of DFS is such that the order in which the neighbors of nodes are examined plays a large part in how long the algorithm takes to find a path. You can change the order that neighbors of nodes are examined below:""")
+            infoIntroLabel.config(text="""Depth-first search, or DFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A stack is used to keep track of which nodes to visit next, which means that a path that stems from one neighbor of a node is followed as far as possible before a different neighbor is examined. Consult a search engine for a simpler or more in-depth explanation.\n\nThe nature of DFS is such that the order in which the neighbors of nodes are examined plays a large part in how long the algorithm takes to find a path. You can change the order that neighbors of nodes are examined below:""")
 
             # create settings UI
             ttk.Label(settingsFrame, text="Checked first:").grid(row=0, column=0, sticky="sew", padx=5, pady=5)
@@ -457,12 +440,8 @@ The nature of DFS is such that the order in which the neighbors of nodes are exa
             settingsFrame.columnconfigure(3, weight=1)
 
         elif alg == 'BFS':
-            infoIntroLabel.config(text="""\
-Breadth-first search, or BFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
-            infoLabel.config(text="""\
-Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A queue is used to keep track of which nodes to visit next, which means that all neighbors of a node are examined before any of the neighbors' neighbors are examined; in other words, the nodes of the graph are traversed 'level by level'. Consult a search engine for a simpler or more in-depth explanation.
-
-In BFS, since all neighbors are examined at once, the order in which the neighbors of nodes are examined doesn't play a very large role in the algorithm's speed; however, it does have an effect. You can change the order that neighbors of nodes are examined below:""")
+            infoIntroLabel.config(text="""Breadth-first search, or BFS, is a graph pathfinding algorithm that is not guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""Beginning at the start node, neighboring nodes are continually examined until the end node is reached, or until it is determined that no path exists. A queue is used to keep track of which nodes to visit next, which means that all neighbors of a node are examined before any of the neighbors' neighbors are examined; in other words, the nodes of the graph are traversed 'level by level'. Consult a search engine for a simpler or more in-depth explanation.\n\nIn BFS, since all neighbors are examined at once, the order in which the neighbors of nodes are examined doesn't play a very large role in the algorithm's speed; however, it does have an effect. You can change the order that neighbors of nodes are examined below:""")
         
             # create settings UI
             ttk.Label(settingsFrame, text="Checked first:").grid(row=0, column=0, sticky="sew", padx=5, pady=5)
@@ -517,30 +496,20 @@ In BFS, since all neighbors are examined at once, the order in which the neighbo
             settingsFrame.columnconfigure(3, weight=1)
         
         elif alg == 'A*':
-            infoIntroLabel.config(text="""\
-A* (pronounced 'ay-star') is a graph pathfinding algorithm that is always guaranteed to give an optimal solution.""")
-            infoLabel.config(text="""\
-Like in DFS and BFS, neighboring nodes are examined beginning with the start node until the end node is reached. As each node is examined, however, data that describes the path taken to get there from the start node is retained. Using this data, each node's 'f-cost' is calculated, which is the sum of the distance traveled to get there (the node's 'g-cost') and the distance from there to the end node (the node's 'h-cost'). The node with the lowest f-cost is always examined next, which always results in the shortest possible path from start to finish. Consult a search engine for a simpler or more in-depth explanation.
-
-A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS, since lots of extra data must be stored for each node (its parent node, g-cost, h-cost, and f-cost). Despite this, a shortest possible path will always be found (there may be multiple). There are no options associated with this algorithm.""")
-
-            # add extra settings here for A*
+            infoIntroLabel.config(text="""A* (pronounced 'ay-star') is a graph pathfinding algorithm that is always guaranteed to give an optimal solution.""")
+            infoLabel.config(text="""Like in DFS and BFS, neighboring nodes are examined beginning with the start node until the end node is reached. As each node is examined, however, data that describes the path taken to get there from the start node is retained. Using this data, each node's 'f-cost' is calculated, which is the sum of the distance traveled to get there (the node's 'g-cost') and the distance from there to the end node (the node's 'h-cost'). The node with the lowest f-cost is always examined next, which always results in the shortest possible path from start to finish. Consult a search engine for a simpler or more in-depth explanation.\n\nA* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS, since lots of extra data must be stored for each node (its parent node, g-cost, h-cost, and f-cost). Despite this, a shortest possible path will always be found (there may be multiple). There are no options associated with this algorithm.""")
 
         elif alg == 'Edge-centric':
             
-            infoIntroLabel.config(text="""\
-The edge-centric algorithm is an algorithm that can be used to generate spanning trees in graphs.
-""")
-            infoLabel.config(text="""\
-Each two vertices in a graph are examined to see if adding an edge will create a cycle, which is true only if the two vertices are already connected. If not, the edge is added; once n - 1 edges have been added, we will have a spanning tree. A union-find data structure can be used to check if vertices are connected or not.
-
-The way this is implemented here, the maze begins with all boundaries already placed, and boundaries are examined one by one to see if removing them would create a cycle. Consult a search engine for a simpler or more in-depth explanation.""")
+            infoIntroLabel.config(text="""The edge-centric algorithm is an algorithm that can be used to generate spanning trees in graphs.""")
+            infoLabel.config(text="""Each two vertices in a graph are examined to see if adding an edge will create a cycle, which is true only if the two vertices are already connected. If not, the edge is added; once n - 1 edges have been added, we will have a spanning tree. A union-find data structure can be used to check if vertices are connected or not.\n\nThe way this is implemented here, the maze begins with all boundaries already placed, and boundaries are examined one by one to see if removing them would create a cycle. Consult a search engine for a simpler or more in-depth explanation.\n\nThere are no options associated with this algorithm.""")
 
         elif alg == 'Vertex-centric':
-            pass
+
+            infoIntroLabel.config(text="""The vertex-centric algorithm is an algorithm that can be used to generate spanning trees in graphs.""")
+            infoLabel.config(text="""This algorithm functions very similarly to DFS/BFS; however, a random starting node is chosen, and edges are added as the search through the graph progresses. Instead of using a stack or queue to keep track of which nodes to visit next, a set is used, and nodes are randomly chosen from the set. Consult a search engine for a simpler or more in-depth explanation.\n\nThere are no options associated with this algorithm.""")
 
     def configAlgButtonPushed(self):
-        print('opening configAlg window')
         root.withdraw()
         algRoot = Toplevel(root)
         algRoot.title('Algorithm Options')
@@ -595,7 +564,6 @@ The way this is implemented here, the maze begins with all boundaries already pl
         algRoot.geometry(root.geometry())
     
     def configAnimButtonPushed(self):
-        print('opening configAlg window')
         root.withdraw()
         animRoot = Toplevel(root)
         animRoot.title('Animation Options')
@@ -608,27 +576,19 @@ The way this is implemented here, the maze begins with all boundaries already pl
         defaultFrame = ttk.Frame(animRoot)
         defaultRadiobutton = ttk.Radiobutton(defaultFrame, text='Default Mode',
             variable=stateData.animMode, value='default')
-        defaultDesc = ttk.Label(defaultFrame, text='''\
-In this mode, animations run automatically upon clicking 'Solve' or 'Generate'. The speed that the animation runs can be controlled using the 'Animation Speed' slider, and the animations can be paused. When the button with a square is pressed, the animation is ended and the maze is cleared.''',
-                            style='AnimSettingsLabel.TLabel')
+        defaultDesc = ttk.Label(defaultFrame, text='''In this mode, animations run automatically upon clicking 'Solve' or 'Generate'. The speed that the animation runs can be controlled using the 'Animation Speed' slider, and the animations can be paused. When the button with a square is pressed, the animation is ended and the maze is cleared.''', style='AnimSettingsLabel.TLabel')
         stepFrame = ttk.Frame(animRoot)
         stepRadiobutton = ttk.Radiobutton(stepFrame, text='Step Mode',
             variable=stateData.animMode, value='step')
-        stepDesc = ttk.Label(stepFrame, text='''\
-In this mode, only one step of the animation is performed at a time. Click the arrow button to advance to the next step.''',
-                            style='AnimSettingsLabel.TLabel')
+        stepDesc = ttk.Label(stepFrame, text='''In this mode, only one step of the animation is performed at a time. Click the arrow button to advance to the next step.''', style='AnimSettingsLabel.TLabel')
         jumpFrame = ttk.Frame(animRoot)
         jumpRadiobutton = ttk.Radiobutton(jumpFrame, text='Jump to End Mode',
             variable=stateData.animMode, value='jump')
-        jumpDesc = ttk.Label(jumpFrame, text='''\
-In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, where the state of the auxiliary data for the algorithm as well as the green solution line is shown.''',
-                            style='AnimSettingsLabel.TLabel')
+        jumpDesc = ttk.Label(jumpFrame, text='''In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, where the state of the auxiliary data for the algorithm as well as the green solution line is shown.''', style='AnimSettingsLabel.TLabel')
         solutionFrame = ttk.Frame(animRoot)
         solutionRadiobutton = ttk.Radiobutton(solutionFrame, text='Solution Only Mode',
             variable=stateData.animMode, value='solution')
-        solutionDesc = ttk.Label(solutionFrame, text='''\
-In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, and only the green solution line is shown. If there is no solution, the state of all the algorithm's auxiliary data is shown at the point where the algorithm failed.''',
-                            style='AnimSettingsLabel.TLabel')
+        solutionDesc = ttk.Label(solutionFrame, text='''In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, and only the green solution line is shown. If there is no solution, the state of all the algorithm's auxiliary data is shown at the point where the algorithm failed.''', style='AnimSettingsLabel.TLabel')
         okayButton = ttk.Button(animRoot, text='Okay', command=lambda:
             self.applyAnimSettings(animRoot))
 
@@ -667,7 +627,6 @@ In this mode, the steps of the algorithm are not shown; the animation immediatel
         solutionFrame.columnconfigure(0, weight=1)
         solutionFrame.columnconfigure(1, weight=1)
 
-        # position in same location as root TODO center - simple!
         animRoot.update_idletasks()
         rootGeom = root.geometry()
         a = rootGeom.find('+')
@@ -808,29 +767,15 @@ class MazeData(object):
                                        tags=('b',))
 
     # draws maze onto the canvas based on data + white background
-    # maybe shouldn't have been a part of mazeData?
-    # mazeData is model, this is view
     def drawMaze(self):
         canvas.create_rectangle(0, 0, cData.w, cData.h, fill='white')
         self.drawCellColors()
         self.drawBoundaries()
-        if MazeData.ad:
-            if stateData.currentAlgorithm.get() == 'DFS' or \
-               stateData.currentAlgorithm.get() == 'BFS':
-                self.drawSimpleSearchAnimation()
-            elif stateData.currentAlgorithm.get() == 'A*':
-                self.drawAsAnimation()
-            elif stateData.currentAlgorithm.get() == 'Edge-centric':
-                if not MazeData.ad.done:
-                    self.drawEcAnimation()
-            else:
-                print('hi')
-
     
     def animate(self):
         if stateData.currentAlgorithm.get() == 'DFS':
             arrowButton.configure(command=mData.stepDfs)
-            MazeData.ad = SimpleSearchAnimationData(self.startCell) # TODO start cell unnecessary here
+            MazeData.ad = SimpleSearchAnimationData(self.startCell)
             if stateData.animMode.get() == 'default':
                 self.drawSimpleSearchAnimation()
                 root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
@@ -887,9 +832,7 @@ class MazeData(object):
     def stepDfs(self):
         if not MazeData.ad: return
         if not stateData.animationRunning.get():
-            print('paused')
             root.wait_variable(stateData.animationRunning)
-            print('unpaused')
             if not MazeData.ad: return
         
         MazeData.ad.currWithParent = MazeData.ad.worklistWithParents.pop()
@@ -942,9 +885,7 @@ class MazeData(object):
     def stepBfs(self):
         if not MazeData.ad: return
         if not stateData.animationRunning.get():
-            print('paused')
             root.wait_variable(stateData.animationRunning)
-            print('unpaused')
             if not MazeData.ad: return
         
         MazeData.ad.currWithParent = MazeData.ad.worklistWithParents.pop(0)
@@ -994,9 +935,7 @@ class MazeData(object):
     def stepAs(self):
         if not MazeData.ad: return
         if not stateData.animationRunning.get():
-            print('paused')
             root.wait_variable(stateData.animationRunning)
-            print('unpaused')
             if not MazeData.ad: return
         
         # pop off of the open list
@@ -1146,9 +1085,7 @@ class MazeData(object):
     def stepEc(self):
         if not MazeData.ad: return
         if not stateData.animationRunning.get():
-            print('paused')
             root.wait_variable(stateData.animationRunning)
-            print('unpaused')
             if not MazeData.ad: return
         
         if len(mData.boundaries) == \
@@ -1207,9 +1144,7 @@ class MazeData(object):
     def stepVc(self):
         if not MazeData.ad: return
         if not stateData.animationRunning.get():
-            print('paused')
             root.wait_variable(stateData.animationRunning)
-            print('unpaused')
             if not MazeData.ad: return
         
         if len(mData.boundaries) == \
@@ -1267,7 +1202,6 @@ class MazeData(object):
             self.stepVc()
 
     def drawVcAnimation(self):
-        print(MazeData.ad)
         canvas.delete(*canvas.find_withtag('d'))
 
         # draw the current tree
@@ -1382,12 +1316,7 @@ class MazeData(object):
                             cData.margin + ((curr_r+0.5)*cData.cell_h) + cData.largeCircleRadius,
                             width=0, fill=currColor, tags=('d'))
 
-        print(f'curr: {MazeData.ad.currWithParent}\nseen: {MazeData.ad.seen}\ntraversalLog: {MazeData.ad.traversalLog}\nworklist: {MazeData.ad.worklistWithParents}\nblack: {MazeData.ad.black}\n') # TODO remove
-
     def drawSolution(self):
-        # either use a queue to not have to calculate rows & columns
-        # twice for each vertex, or TODO update to reflect new
-        # indexing scheme
         for i in range(len(MazeData.ad.solution) - 1):
             sr = MazeData.ad.solution[i] // self.cols
             sc = MazeData.ad.solution[i] % self.cols
@@ -1424,8 +1353,6 @@ class MazeData(object):
                 stepBlue = abs(maxColor[2] - minColor[2]) // buckets
             else:
                 stepRed, stepGreen, stepBlue = 0, 0, 0
-            # TODO get rid of minColor and maxColor and just
-            # put numbers in for lagging purposes?
 
             for vtx in MazeData.ad.openQueue.list:
                 color = rgbString(minColor[0] + stepRed * vtx.f,
@@ -1458,8 +1385,6 @@ class MazeData(object):
                 stepBlue = abs(maxColor[2] - minColor[2]) // buckets
             else:
                 stepRed, stepGreen, stepBlue = 0, 0, 0
-            # TODO get rid of minColor and maxColor and just
-            # put numbers in for lagging purposes?
 
             for i in range(len(MazeData.ad.closedList.list)-1, -1, -1):
                 vtx = MazeData.ad.closedList.list[i]
@@ -1500,7 +1425,6 @@ class MazeData(object):
                                 cData.margin + ((curr_r+0.5)*cData.cell_h) + cData.largeCircleRadius,
                                 width=0, fill=currColor, tags=('d'))
 
-        print(f'openQueue: {MazeData.ad.openQueue}\nclosedList: {MazeData.ad.closedList}\n')    # TODO remove
 
     def updateRows(self):
         # update start/end cells if they're on the bottom row
@@ -1542,13 +1466,12 @@ class MazeData(object):
     
     def updateStartEndCells(self):
         pass
-        # TODO ??? don't know if i'll need this
-        # want changing location of start and end cells feature to be disabled
-        # when:
+        # TODO unimplemented
+        # want changing location of start and end cells feature to be disabled when:
         # an animation is running
         # when we're in generate mode, and there's a human-drawn solution still
         # there
-        # MAKE IT SO THEY JUST CAN'T BE PUT ON THE SAME SQUARE (text would overlap)
+        # need start & end cells to always be on different squares
         
     def clearMaze(self):
         self.boundaries = set()
@@ -1608,7 +1531,7 @@ class CanvasData(object):
                                        cData.margin + ((1+r)*cData.cell_h),
                                        stipple='gray50',
                                        width=5, capstyle='round',
-                                       tags=('hoverBound'))         # TODO mData.boundaryWidth - replace everywhere
+                                       tags=('hoverBound'))
                 elif (local_x > local_y):
                     # draw boundary up
                     canvas.create_line(cData.margin + (c*cData.cell_w),
@@ -1636,26 +1559,12 @@ class CanvasData(object):
                                        stipple='gray50',
                                        width=5, capstyle='round',
                                        tags=('hoverBound'))
-        else:
-            canvas.delete(*canvas.find_withtag('hoverNode'))
-            # TODO add stuff to do when mouse is hovering
-            # while in generate mode
-            # only want something to happen if in start square,
-            # or current active square
-            # if (margin < e.x < w - margin) and \
-            #    (margin < e.y < h - margin):
-            #     diameter = min(cell_w, cell_h) / 4
-            #     canvas.create_oval()
 
-        # TODO eventual support for changing start and end squares
-        
-        # lift and lower methods for canvas items allow
-        # you to change the worklisting order
+        # TODO eventual support for changing start and end squares?
 
     def mouseClicked(self, e):
         if MazeData.ad: return
         
-        print(mData.boundaries)  # TODO remove later
         c = (e.x - cData.margin) // cData.cell_w
         r = (e.y - cData.margin) // cData.cell_h
         if (stateData.mode == 'sol'):
@@ -1697,10 +1606,6 @@ class CanvasData(object):
             canvas.delete(*canvas.find_withtag('b'))
             mData.drawBoundaries()
             self.mouseHovering(e)
-        else:
-            pass
-            # TODO add stuff to do when mouse is clicked
-            # in generate mode
 
     def mouseDragging(self, e):
         if MazeData.ad: return
@@ -1736,11 +1641,7 @@ class CanvasData(object):
                     if boundary not in mData.boundaries:
                         mData.boundaries.add(boundary)
             canvas.delete(*canvas.find_withtag('b'))
-            mData.drawBoundaries() 
-        else:
-            pass
-            # TODO add here the stuff to do when mouse is dragged
-            # in generate mode
+            mData.drawBoundaries()
 
 
 print('starting...')
@@ -1770,16 +1671,12 @@ arrowImage = arrowImage.subsample(10, 10)
 defFont = font.nametofont('TkDefaultFont')
 defFont['size'] += 2
 largerFont = font.Font(family=defFont['family'],
-                        name='largerFont', size=(defFont['size']+0))
+                        name='largerFont', size=(defFont['size']+3))
 hugeFont = font.Font(family=defFont['family'],
                      name='hugeFont', size=(defFont['size']+5))
 
 s = ttk.Style()
 s.theme_use('clam')
-s.configure('OptionsButton.TButton', wraplength=80,
-                justify='center', padding=5)
-s.configure('InfoLabel.TLabel', wraplength=1065)
-s.configure('AnimSettingsLabel.TLabel', wraplength=500)
 
 butDefaultColor = "#c7c5c1"
 butDefaultPress = rgbString(186, 181, 171)
@@ -1804,6 +1701,11 @@ s.configure("TButton", background=butDefaultColor)
 makeButStyleBlue("Solve.TButton")
 makeButStyleGreen("Main.TButton")
 
+s.configure('OptionsButton.TButton', wraplength=80,
+                justify='center', padding=5)
+s.configure('InfoLabel.TLabel', wraplength=1065)
+s.configure('AnimSettingsLabel.TLabel', wraplength=500)
+
 # create the object instances that will store all the data
 mData = MazeData(defaultRows, defaultCols, defaultBounds,
                  0, defaultRows*defaultCols - 1)
@@ -1827,15 +1729,14 @@ clearButton = ttk.Button(genControlsFrame, text='Clear Maze',
                         command=lambda: mData.clearMaze())
 rowsLabel = ttk.Label(genControlsFrame, text='Rows: ')
 rowsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
-                        command=lambda: mData.updateRows())    # TODO disable when there's user-inputted stuff on the maze, or an animation running
+                        command=lambda: mData.updateRows())
 colsLabel = ttk.Label(genControlsFrame, text='Columns: ')
 colsSpinbox = ttk.Spinbox(genControlsFrame, from_=2.0, to=30.0,
-                        command=lambda: mData.updateCols())    # TODO disable when there's user-inputted stuff on the maze, or an animation running
-# use rowsSpinbox.get()
+                        command=lambda: mData.updateCols())
 
 algDisplayFrame = ttk.Frame(mainframe, relief='sunken', borderwidth=5)
 algSupLabel = ttk.Label(algDisplayFrame, text='Algorithm:', width=30)
-algCombobox = ttk.Combobox(algDisplayFrame, textvariable=stateData.currentAlgorithm)
+algCombobox = ttk.Combobox(algDisplayFrame, textvariable=stateData.currentAlgorithm, style='AlgCombobox.TCombobox')
 configAlgButton = ttk.Button(algDisplayFrame, style='OptionsButton.TButton',
                                 text='Algorithm Info & Options',
                                 command=stateData.configAlgButtonPushed)
@@ -1855,7 +1756,7 @@ solgenButton = ttk.Button(solgenFrame,
                             default='active', style="Main.TButton")
 pausePlayButton = ttk.Button(solgenFrame, image=pauseImage,
                              command=stateData.pauseAnimation)
-arrowButton = ttk.Button(solgenFrame, image=arrowImage)     # TODO set callback
+arrowButton = ttk.Button(solgenFrame, image=arrowImage)
 stopButton = ttk.Button(solgenFrame, image=stopImage,
                         command=stateData.stopAnimateMode)
 
@@ -1865,26 +1766,6 @@ infoLabel = ttk.Label(infoFrame, textvariable=infoLabelText, font=largerFont)
 
 canvas = Canvas(mainframe, width=defaultCanvasWidth,
                 height=defaultCanvasHeight)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 # geometry management
@@ -1952,35 +1833,13 @@ infoFrame.rowconfigure(0, weight=1)
 infoFrame.columnconfigure(0, weight=1)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-rowsSpinbox.state(['readonly'])
-colsSpinbox.state(['readonly'])
+# final adjustments
+algCombobox.state(["readonly"])
+rowsSpinbox.state(["readonly"])
+colsSpinbox.state(["readonly"])
 rowsSpinbox.set(defaultRows)
 colsSpinbox.set(defaultCols)
 animationSpeedSlider.set(defaultSpeed)
-# then draw the data onto the canvas
-# initially draw the canvas and maze
 canvas.create_rectangle(0, 0, defaultCanvasWidth,
                         defaultCanvasHeight, fill='white')
 mData.drawMaze()
@@ -1999,17 +1858,6 @@ root.bind('<Control-w>', lambda e: root.destroy())
 root.update_idletasks()
 root.geometry('1100x600+200+200')
 
+# run the app
 root.mainloop()
 print('application closed')
-
-
-# to do:
-
-# find solve line function - use traversalLog to just trace back,
-# since every node is stored only once
-
-# mData now has mData.animData class-wide attribute that stores animation
-# data when animate mode is on
-# - can phase out mData.animateModeOn, since we know the mode is on
-# when animData is not None
-
