@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import font
-from random import shuffle
+from random import shuffle, choice
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
@@ -9,8 +9,31 @@ def rgbString(red, green, blue):
 
 class vcAnimationData(object):
     def __init__(self):
-        self.queue = [mData.startCell]
-        # TODO continue
+        start = choice(range(mData.rows*mData.cols))
+
+        self.bag = set()
+        self.tree = set([(start, start)])
+
+        upper = start - mData.cols
+        lower = start + mData.cols
+        left = start - 1
+        right = start + 1
+        if upper >= 0: self.bag.add((start, upper))
+        if lower < mData.rows*mData.cols: self.bag.add((start, lower))
+        if start % mData.cols != 0: self.bag.add((start, left))
+        if right % mData.cols != 0: self.bag.add((start, right))
+
+        boundstemp = list(range(-1, -mData.cols, -1))
+        for i in range(mData.cols, mData.rows*mData.cols, mData.cols):
+            boundstemp.append(i)
+            for j in range(i+1, i+mData.cols):
+                boundstemp.append(j)
+                boundstemp.append(-j)
+        mData.boundaries = set(boundstemp.copy())
+        self.done = False
+    
+    def __repr__(self):
+        return "bag: " +  str(self.bag) +  "\ntree: " +  str(self.tree) +  "\n"
 
 class ecAnimationData(object):
     def __init__(self):
@@ -24,10 +47,6 @@ class ecAnimationData(object):
         mData.boundaries = set(self.unchecked.copy())
         shuffle(self.unchecked)
         self.done = False
-    
-    def __repr__(self):
-        return f'unchecked: {self.unchecked}\nunion find: {self.unionFind}\nbounds: {mData.boundaries}'
-        # TODO remove
 
 
 class SimpleSearchAnimationData(object):
@@ -95,7 +114,7 @@ class SimpleSearchAnimationData(object):
             right = curr + 1
             if (right not in MazeData.ad.seen and \
                 -right not in mData.boundaries and \
-                (curr+1) % mData.cols != 0):
+                right % mData.cols != 0):
                 MazeData.ad.seen.add(right)
                 MazeData.ad.worklistWithParents.append((right, curr))
 
@@ -245,8 +264,6 @@ class ApplicationStateData(object):
                 stateData.currentAlgorithm.get())
 
     def startAnimateMode(self):
-        # TODO could just put all of this in mData.animate... maybe not
-        # for the sake of modularity?
         self.animationRunning.set(True)
         solgenButton.grid_remove()
         
@@ -491,6 +508,13 @@ In BFS, since all neighbors are examined at once, the order in which the neighbo
                 return callback
 
             for cb in cbs: cb.bind("<<ComboboxSelected>>", createCBCallback(cb))
+
+            settingsFrame.rowconfigure(0, weight=1)
+            settingsFrame.rowconfigure(1, weight=1)
+            settingsFrame.columnconfigure(0, weight=1)
+            settingsFrame.columnconfigure(1, weight=1)
+            settingsFrame.columnconfigure(2, weight=1)
+            settingsFrame.columnconfigure(3, weight=1)
         
         elif alg == 'A*':
             infoIntroLabel.config(text="""\
@@ -503,7 +527,15 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
             # add extra settings here for A*
 
         elif alg == 'Edge-centric':
-            pass    # TODO generate stuff
+            
+            infoIntroLabel.config(text="""\
+The edge-centric algorithm is an algorithm that can be used to generate spanning trees in graphs.
+""")
+            infoLabel.config(text="""\
+Each two vertices in a graph are examined to see if adding an edge will create a cycle, which is true only if the two vertices are already connected. If not, the edge is added; once n - 1 edges have been added, we will have a spanning tree. A union-find data structure can be used to check if vertices are connected or not.
+
+The way this is implemented here, the maze begins with all boundaries already placed, and boundaries are examined one by one to see if removing them would create a cycle. Consult a search engine for a simpler or more in-depth explanation.""")
+
         elif alg == 'Vertex-centric':
             pass
 
@@ -578,25 +610,25 @@ A* is guaranteed to be optimal, but it is not as memory-efficient as DFS or BFS,
             variable=stateData.animMode, value='default')
         defaultDesc = ttk.Label(defaultFrame, text='''\
 In this mode, animations run automatically upon clicking 'Solve' or 'Generate'. The speed that the animation runs can be controlled using the 'Animation Speed' slider, and the animations can be paused. When the button with a square is pressed, the animation is ended and the maze is cleared.''',
-                            style='InfoLabel.TLabel')
+                            style='AnimSettingsLabel.TLabel')
         stepFrame = ttk.Frame(animRoot)
         stepRadiobutton = ttk.Radiobutton(stepFrame, text='Step Mode',
             variable=stateData.animMode, value='step')
         stepDesc = ttk.Label(stepFrame, text='''\
 In this mode, only one step of the animation is performed at a time. Click the arrow button to advance to the next step.''',
-                            style='InfoLabel.TLabel')
+                            style='AnimSettingsLabel.TLabel')
         jumpFrame = ttk.Frame(animRoot)
         jumpRadiobutton = ttk.Radiobutton(jumpFrame, text='Jump to End Mode',
             variable=stateData.animMode, value='jump')
         jumpDesc = ttk.Label(jumpFrame, text='''\
 In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, where the state of the auxiliary data for the algorithm as well as the green solution line is shown.''',
-                            style='InfoLabel.TLabel')
+                            style='AnimSettingsLabel.TLabel')
         solutionFrame = ttk.Frame(animRoot)
         solutionRadiobutton = ttk.Radiobutton(solutionFrame, text='Solution Only Mode',
             variable=stateData.animMode, value='solution')
         solutionDesc = ttk.Label(solutionFrame, text='''\
 In this mode, the steps of the algorithm are not shown; the animation immediately jumps to the end, and only the green solution line is shown. If there is no solution, the state of all the algorithm's auxiliary data is shown at the point where the algorithm failed.''',
-                            style='InfoLabel.TLabel')
+                            style='AnimSettingsLabel.TLabel')
         okayButton = ttk.Button(animRoot, text='Okay', command=lambda:
             self.applyAnimSettings(animRoot))
 
@@ -842,9 +874,15 @@ class MazeData(object):
                 self.stepEc()
         elif stateData.currentAlgorithm.get() == 'Vertex-centric':
             arrowButton.configure(command=mData.stepVc)
-        else:
-            print('There was a problem... algorithm not valid')
-            stateData.stopAnimateMode()     # TODO remove
+            MazeData.ad = vcAnimationData()
+            if stateData.animMode.get() == 'default':
+                self.drawVcAnimation()
+                root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                   lambda: self.stepVc())
+            elif stateData.animMode.get() == 'step':
+                self.drawVcAnimation()
+            else:
+                self.stepVc()
 
     def stepDfs(self):
         if not MazeData.ad: return
@@ -1166,6 +1204,94 @@ class MazeData(object):
         elif stateData.animMode.get() != 'step':
             self.stepEc()
 
+    def stepVc(self):
+        if not MazeData.ad: return
+        if not stateData.animationRunning.get():
+            print('paused')
+            root.wait_variable(stateData.animationRunning)
+            print('unpaused')
+            if not MazeData.ad: return
+        
+        if len(mData.boundaries) == \
+                mData.rows*mData.cols - mData.rows - mData.cols + 1:
+            pausePlayButton.state(['disabled'])
+            arrowButton.state(['disabled'])
+            canvas.delete(*canvas.find_withtag('b'))
+            mData.drawBoundaries()
+            MazeData.ad.done = True
+            if stateData.animMode.get() == 'jump':
+                mData.drawVcAnimation()
+            infoLabelText.set('Finished!')
+            return
+
+        # choose something arbitrarily from the bags
+        currWithParent = choice(list(MazeData.ad.bag))
+        MazeData.ad.bag.remove(currWithParent)
+
+        # add to tree and remove the associated boundary
+        curr = currWithParent[1]
+        parent = currWithParent[0]
+        if parent == curr - mData.cols: mData.boundaries.remove(curr)
+        elif parent == curr - 1: mData.boundaries.remove(-curr)
+        elif parent == curr + 1: mData.boundaries.remove(-parent)
+        else: mData.boundaries.remove(parent)
+        MazeData.ad.tree.add(currWithParent)
+
+        # add unmarked neighbors to bag that aren't already in bag
+        upper = curr - mData.cols
+        if (upper >= 0 and len([vs for vs in MazeData.ad.bag if vs[1] == upper]) == 0 and \
+            len([vs for vs in MazeData.ad.tree if vs[1] == upper]) == 0):
+            MazeData.ad.bag.add((curr, upper))
+        lower = curr + mData.cols
+        if (lower < mData.rows*mData.cols and len([vs for vs in MazeData.ad.bag if vs[1] == lower]) == 0 and \
+            len([vs for vs in MazeData.ad.tree if vs[1] == lower]) == 0):
+            MazeData.ad.bag.add((curr, lower))
+        left = curr - 1
+        if (curr % mData.cols != 0 and len([vs for vs in MazeData.ad.bag if vs[1] == left]) == 0 and \
+            len([vs for vs in MazeData.ad.tree if vs[1] == left]) == 0):
+            MazeData.ad.bag.add((curr, left))
+        right = curr + 1
+        if (right % mData.cols != 0 and len([vs for vs in MazeData.ad.bag if vs[1] == right]) == 0 and \
+            len([vs for vs in MazeData.ad.tree if vs[1] == right]) == 0):
+            MazeData.ad.bag.add((curr, right))
+
+        if stateData.animMode.get() == 'default' or \
+            stateData.animMode.get() == 'step':
+            self.drawVcAnimation()
+
+        if stateData.animMode.get() == 'default':
+            root.update_idletasks()
+            root.after(int(animationSpeedSlider.get()) * 1000 // 30, 
+                    lambda: self.stepVc())
+        elif stateData.animMode.get() != 'step':
+            self.stepVc()
+
+    def drawVcAnimation(self):
+        print(MazeData.ad)
+        canvas.delete(*canvas.find_withtag('d'))
+
+        # draw the current tree
+        for vtx in MazeData.ad.tree:
+            sr = vtx[1] // self.cols
+            sc = vtx[1] % self.cols
+            er = vtx[0] // self.cols
+            ec = vtx[0] % self.cols
+            canvas.create_line(cData.margin + ((sc+0.5)*cData.cell_w),
+                               cData.margin + ((sr+0.5)*cData.cell_h),
+                               cData.margin + ((ec+0.5)*cData.cell_w),
+                               cData.margin + ((er+0.5)*cData.cell_h),
+                               width=cData.lineWidth, fill='blue', capstyle='round',
+                               tags=('d'))
+            canvas.create_oval(cData.margin + ((sc+0.5)*cData.cell_w) - cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) - cData.smallCircleRadius,
+                               cData.margin + ((sc+0.5)*cData.cell_w) + cData.smallCircleRadius,
+                               cData.margin + ((sr+0.5)*cData.cell_h) + cData.smallCircleRadius,
+                               width=0, fill='blue', tags=('d'))
+
+        # draw the boundaries
+        canvas.delete(*canvas.find_withtag('b'))
+        mData.drawBoundaries()
+
     def drawEcAnimation(self):
         canvas.delete(*canvas.find_withtag('b'))
         mData.drawBoundaries()
@@ -1187,7 +1313,6 @@ class MazeData(object):
                                 cData.margin + (cData.cell_h * (r+1)),
                                 width=5, capstyle='round', fill='red',
                                 tags=('b',))
-        print(MazeData.ad)
 
     def drawSimpleSearchAnimation(self):
         curr = MazeData.ad.currWithParent[0]
@@ -1654,6 +1779,7 @@ s.theme_use('clam')
 s.configure('OptionsButton.TButton', wraplength=80,
                 justify='center', padding=5)
 s.configure('InfoLabel.TLabel', wraplength=1065)
+s.configure('AnimSettingsLabel.TLabel', wraplength=500)
 
 butDefaultColor = "#c7c5c1"
 butDefaultPress = rgbString(186, 181, 171)
