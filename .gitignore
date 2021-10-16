@@ -1,9 +1,0 @@
-__pycache__
-venv
-.vscode
-.testingFeatures.py
-.DS_Store
-cursors.py
-notesForFuture.txt
-possibleFeaturesToAdd.txt
-testing.py
