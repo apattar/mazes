@@ -2,9 +2,15 @@ from tkinter import *
 from tkinter import ttk
 from tkinter import font
 from random import shuffle, choice
+import os
+import sys
 
 def rgbString(red, green, blue):
     return '#%02x%02x%02x' % (red, green, blue)
+
+def getImagePath(name):
+    base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, name)
 
 
 class vcAnimationData(object):
@@ -1659,10 +1665,10 @@ redrawDelay = 1
 
 
 # handle styling
-pauseImage = PhotoImage(file='images/pause.png')
-playImage = PhotoImage(file='images/start.png')
-stopImage = PhotoImage(file='images/stop.png')
-arrowImage = PhotoImage(file='images/arrow.png')
+pauseImage = PhotoImage(file=getImagePath('pause.png'))
+playImage = PhotoImage(file=getImagePath('start.png'))
+stopImage = PhotoImage(file=getImagePath('stop.png'))
+arrowImage = PhotoImage(file=getImagePath('arrow.png'))
 pauseImage = pauseImage.subsample(5, 5)
 playImage = playImage.subsample(5, 5)
 stopImage = stopImage.subsample(5, 5)
